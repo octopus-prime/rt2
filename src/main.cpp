@@ -79,22 +79,24 @@ int main(int argc, char** argv) try {
         return sphere;
     };
 
-    const auto copper = make_sphere({3.3f, -0.9f, -2.0f}, 1.1f,
+    const auto copper = make_sphere({-4.8f, -0.9f, 2.5f}, 1.1f,
         shader_t{metal_t{.reflectance = {0.95f, 0.48f, 0.28f}}});
-    const auto blue = make_sphere({0.3f, -0.35f, -4.6f}, 1.65f,
+    const auto blue = make_sphere({0, 0, 0}, 1.65f,
         shader_t{phong_t{
             .ambient = {0.008f, 0.018f, 0.035f},
             .diffuse = {0.035f, 0.18f, 0.38f},
             .specular = {0.5f, 0.6f, 0.7f},
             .shininess = 80
-        }});
-    const auto coral = make_sphere({-3.0f, -1.35f, 1.0f}, 0.65f,
+        }}).scale({1.4f, 0.6f, 1})
+        .translate({0.3f, 0.9f, -4.6f});
+    const auto coral = make_sphere({0, 0, 0}, 0.65f,
         shader_t{phong_t{
             .ambient = {0.025f, 0.006f, 0.008f},
             .diffuse = {0.55f, 0.055f, 0.075f},
             .specular = {0.35f, 0.25f, 0.25f},
             .shininess = 48
-        }});
+        }}).scale({0.6f, 1.4f, 1})
+        .translate({-3.0f, -2 + 0.65f * 1.4f, 1.0f});
     const auto silver = make_sphere({2.7f, -1.5f, 1.5f}, 0.5f,
         shader_t{metal_t{.reflectance = {0.88f, 0.92f, 0.98f}}});
 
@@ -119,8 +121,9 @@ int main(int argc, char** argv) try {
     const auto spindle = make_sor(
         sor_t{{{0, 0.6f}, {0.25f, 0.7f}, {0.9f, 0.25f},
                {1.6f, 0.55f}, {2.2f, 0.2f}, {2.5f, 0.1f}}},
-        {4.8f, -2, -3.5f},
-        shader_t{metal_t{.reflectance = {0.8f, 0.85f, 0.92f}}});
+        {0, 0, 0},
+        shader_t{metal_t{.reflectance = {0.8f, 0.85f, 0.92f}}})
+        .scale({1.6f, 1.6f, 1.6f}).translate({3.5f, -2, -2.8f});
 
     const auto gem = object_t{
         .surface = surface_t{mesh_t{
@@ -300,9 +303,9 @@ int main(int argc, char** argv) try {
                 light_t{.origin = {0, 20, -20}, .intensity = {0.55f, 0.65f, 0.85f}}},
             .camera = camera_t{
                 .origin = {0, 32, 48},
-                .direction = {0, -0.6f, -1},
+                .direction = {0, -0.6875f, -1},
                 .up = {0, 1, 0},
-                .fov = 55}
+                .fov = 28}
         };
     }
 
