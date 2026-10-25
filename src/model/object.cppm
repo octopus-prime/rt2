@@ -22,10 +22,14 @@ struct object_t {
     matrix_t object_scene = boost::qvm::inverse(scene_object);
     std::optional<box3_t> scene_bounds = transformed_bounds();
 
-    // Call after directly changing surface or scene_object; translate/scale do this automatically.
+    // Call after directly changing surface or scene_object; transform methods do this automatically.
     void update_transform();
     object_t& translate(const vector_t& offset);
     object_t& scale(const vector_t& factors);
+    // Angles are in radians; rotations are about scene-space axes through the origin.
+    object_t& rotate_x(const scalar_t angle);
+    object_t& rotate_y(const scalar_t angle);
+    object_t& rotate_z(const scalar_t angle);
 
     std::optional<hit_t> intersect(const ray_t& ray) const;
     vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const;

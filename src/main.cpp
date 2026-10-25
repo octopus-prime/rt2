@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <numbers>
 #include <print>
 #include <stdexcept>
 #include <string_view>
@@ -31,6 +32,7 @@ using image_t = bg::rgb8_image_t;
 // static_assert(Intersectable<scene_t>);
 
 int main(int argc, char** argv) try {
+    constexpr scalar_t quarter_turn = std::numbers::pi_v<scalar_t> / 2;
     bool many_objects = false;
     bool benchmark = false;
     for (int i = 1; i < argc; ++i) {
@@ -60,6 +62,9 @@ int main(int argc, char** argv) try {
         .surface = surface_t{torus_t{4.f, 0.25f}},
         .shader = shader_t{metal_t{.reflectance = {0.92f, 0.68f, 0.32f}}}
     }
+    .rotate_x(quarter_turn / 6)
+    .rotate_y(-quarter_turn / 5)
+    .rotate_z(quarter_turn / 8)
     .translate({-2.6f, 0.5f, -3.0f});
 
     const auto make_sphere = [](const vector_t& origin, scalar_t radius, const shader_t& shader) {
@@ -90,19 +95,12 @@ int main(int argc, char** argv) try {
     const auto silver = make_sphere({2.7f, -1.5f, 1.5f}, 0.5f,
         shader_t{metal_t{.reflectance = {0.88f, 0.92f, 0.98f}}});
 
-    const auto make_sor = [](const sor_t& surface, const vector_t& origin, const shader_t& shader) {
+    const auto make_sor = [quarter_turn](const sor_t& surface, const vector_t& origin, const shader_t& shader) {
         auto object = object_t{
             .surface = surface_t{surface},
-            .shader = shader,
-            // Map the profile's local z axis to world +y.
-            .scene_object = matrix_t{{
-                {1, 0, 0, 0},
-                {0, 0, 1, 0},
-                {0, -1, 0, 0},
-                {0, 0, 0, 1}
-            }}
+            .shader = shader
         };
-        object.translate(origin);
+        object.rotate_x(-quarter_turn).translate(origin);
         return object;
     };
     const auto vase = make_sor(
@@ -198,6 +196,9 @@ int main(int argc, char** argv) try {
                         .surface = surface_t{torus_t{4, 0.25f}},
                         .shader = object2.shader};
                     object.scale({0.4f, 0.4f, 0.4f})
+                        .rotate_x(quarter_turn * static_cast<scalar_t>(row % 5) / 4)
+                        .rotate_y(quarter_turn * static_cast<scalar_t>(row % 3) / 3)
+                        .rotate_z(quarter_turn * static_cast<scalar_t>(row % 4) / 4)
                         .translate(origin + vector_t{0, 1, 0});
                     objects.push_back(object);
                 } else {

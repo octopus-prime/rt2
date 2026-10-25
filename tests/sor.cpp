@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <exception>
 #include <limits>
+#include <numbers>
 #include <print>
 #include <stdexcept>
 #include <string>
@@ -212,6 +213,45 @@ void test_object_bounds() {
     }
 }
 
+void test_rotations() {
+    using rotation_t = object_t& (object_t::*)(scalar_t);
+    const std::array<rotation_t, 3> rotations{
+        &object_t::rotate_x, &object_t::rotate_y, &object_t::rotate_z};
+    const scalar_t angle = std::numbers::pi_v<scalar_t> / 2;
+    for (int axis = 0; axis < 3; ++axis) {
+        const int source = (axis + 1) % 3;
+        const int target = (axis + 2) % 3;
+        vector_t point{0, 0, 0};
+        point.a[source] = 1;
+        object_t object{.surface = surface_t{sphere_t{}}, .shader = shader_t{phong_t{}}};
+        vector_t scale{1, 1, 1};
+        scale.a[source] = 2;
+        object.scale(scale).translate(point);
+        check(&(object.*rotations[axis])(angle) == &object, "Rotation must support chaining");
+        const auto position = boost::qvm::transform_point(object.scene_object, point);
+        for (int i = 0; i < 3; ++i) {
+            close(position.a[i], i == target ? scalar_t{3} : scalar_t{0},
+                "Right-handed scene-space rotation");
+        }
+        const auto restored = boost::qvm::transform_point(object.object_scene, position);
+        for (int i = 0; i < 3; ++i) {
+            close(restored.a[i], point.a[i], "Rotation inverse cache");
+        }
+        close(boost::geometry::get<boost::geometry::max_corner, 0>(*object.scene_bounds),
+            target == 0 ? scalar_t{3} : scalar_t{1}, "Rotated bounds");
+        vector_t origin{0, 0, 0};
+        vector_t direction{0, 0, 0};
+        origin.a[target] = 5;
+        direction.a[target] = -1;
+        const auto hit = object.intersect(ray(origin, direction));
+        check(hit.has_value(), "Rotated ellipsoid intersection");
+        close(hit->distance, 2, "Rotated ellipsoid distance");
+        (object.*rotations[axis])(-angle);
+        const auto unrotated = boost::qvm::transform_point(object.scene_object, point);
+        close(unrotated.a[source], 3, "Negative rotation restores transform");
+    }
+}
+
 void test_torus_precision() {
     const torus_t torus{4, scalar_t{0.25f}};
     for (int i = 0; i < 40; ++i) {
@@ -317,6 +357,7 @@ int main() {
         test_curved_profile();
         test_invalid_profiles();
         test_object_bounds();
+        test_rotations();
         test_torus_precision();
         test_scene_index();
         std::println("SOR tests passed (scalar_t: {} bits)", sizeof(scalar_t) * 8);

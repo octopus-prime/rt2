@@ -78,6 +78,24 @@ object_t& object_t::scale(const vector_t& factors) {
     return *this;
 }
 
+object_t& object_t::rotate_x(const scalar_t angle) {
+    scene_object = boost::qvm::rotx_mat<4>(angle) * scene_object;
+    update_transform();
+    return *this;
+}
+
+object_t& object_t::rotate_y(const scalar_t angle) {
+    scene_object = boost::qvm::roty_mat<4>(angle) * scene_object;
+    update_transform();
+    return *this;
+}
+
+object_t& object_t::rotate_z(const scalar_t angle) {
+    scene_object = boost::qvm::rotz_mat<4>(angle) * scene_object;
+    update_transform();
+    return *this;
+}
+
 std::optional<hit_t> object_t::intersect(const ray_t& ray) const {
     const auto segment = ray.segment();
     if (ray.min > ray.max) {
