@@ -119,6 +119,18 @@ int main(int argc, char** argv) try {
         {4.8f, -2, -3.5f},
         shader_t{metal_t{.reflectance = {0.8f, 0.85f, 0.92f}}});
 
+    const auto gem = object_t{
+        .surface = surface_t{mesh_t{
+            {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}},
+            {{2, 4, 0}, {2, 1, 4}, {2, 5, 1}, {2, 0, 5},
+             {3, 0, 4}, {3, 4, 1}, {3, 1, 5}, {3, 5, 0}}}},
+        .shader = shader_t{phong_t{
+            .ambient = {0.025f, 0.01f, 0.035f},
+            .diffuse = {0.4f, 0.08f, 0.55f},
+            .specular = {0.6f, 0.6f, 0.6f}, .shininess = 64}}
+    }.scale({0.8f, 1.2f, 0.8f}).rotate_y(quarter_turn / 3)
+        .translate({-1.3f, -0.8f, 2.5f});
+
     const auto make_wall = [](const vector_t& origin, const vector_t& normal, const vector_t& color) {
         const vector_t reference = normal.a[1] == 0
             ? vector_t{0, 1, 0} : vector_t{1, 0, 0};
@@ -163,7 +175,7 @@ int main(int argc, char** argv) try {
     };
 
     auto scene = scene_t{
-        .objects = {object1, object2, copper, blue, coral, silver, vase, spindle,
+        .objects = {object1, object2, copper, blue, coral, silver, vase, spindle, gem,
                     floor, ceiling, back, left, right},
         .lights = {light1, light2, light3},
         .camera = camera_t{

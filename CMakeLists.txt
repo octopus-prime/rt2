@@ -35,6 +35,7 @@ if(BUILD_TESTING)
     add_executable(rt2_tests
         tests/main.cpp
         tests/model/sor.cpp
+        tests/model/mesh.cpp
         tests/model/object.cpp
         tests/model/torus.cpp
         tests/model/scene.cpp
@@ -47,7 +48,7 @@ if(BUILD_TESTING)
     target_compile_features(rt2_tests PRIVATE cxx_std_23)
     target_compile_options(rt2_tests PRIVATE -march=native)
     target_link_libraries(rt2_tests PRIVATE Threads::Threads)
-    foreach(suite IN ITEMS model/sor model/object model/torus model/scene renderer/renderer)
+    foreach(suite IN ITEMS model/sor model/mesh model/object model/torus model/scene renderer/renderer)
         add_test(NAME ${suite} COMMAND rt2_tests ${suite})
     endforeach()
 endif()
