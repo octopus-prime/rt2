@@ -133,6 +133,15 @@ int main(int argc, char** argv) try {
     }.scale({0.8f, 1.2f, 0.8f}).rotate_y(quarter_turn / 3)
         .translate({-1.3f, -0.8f, 2.5f});
 
+    const auto text = object_t{
+        .surface = surface_t{text_t{RT2_FONT_FILE, "rt2", 0.18f}},
+        .shader = shader_t{phong_t{
+            .ambient = {0.025f, 0.03f, 0.035f},
+            .diffuse = {0.55f, 0.7f, 0.85f},
+            .specular = {0.8f, 0.8f, 0.8f}, .shininess = 80}}
+    }.scale({1.8f, 1.8f, 1.8f}).rotate_y(-quarter_turn / 8)
+        .translate({-1.4f, 3.1f, -5});
+
     const auto make_wall = [](const vector_t& origin, const vector_t& normal, const vector_t& color) {
         const vector_t reference = normal.a[1] == 0
             ? vector_t{0, 1, 0} : vector_t{1, 0, 0};
@@ -177,7 +186,7 @@ int main(int argc, char** argv) try {
     };
 
     auto scene = scene_t{
-        .objects = {object1, object2, copper, blue, coral, silver, vase, spindle, gem,
+        .objects = {object1, object2, copper, blue, coral, silver, vase, spindle, gem, text,
                     floor, ceiling, back, left, right},
         .lights = {light1, light2, light3},
         .camera = camera_t{
@@ -259,6 +268,14 @@ int main(int argc, char** argv) try {
                         .rotate_y(quarter_turn * static_cast<scalar_t>(row % 8) / 2)
                         .translate(origin);
                     objects.push_back(std::move(dragon));
+                } else if (kind == 3) {
+                    auto label = object_t{.surface = text.surface, .shader = text.shader};
+                    label.translate({-0.7f, 0, 0})
+                        .scale({1.2f, 1.2f, 1.2f})
+                        .rotate_x(-quarter_turn / 4)
+                        .rotate_y(quarter_turn * static_cast<scalar_t>(row % 5 - 2) / 8)
+                        .translate(origin);
+                    objects.push_back(std::move(label));
                 } else {
                     const auto& shader = kind % 3 == 0 ? copper.shader
                         : kind % 3 == 1 ? blue.shader : coral.shader;

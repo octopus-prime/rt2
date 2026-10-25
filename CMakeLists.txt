@@ -10,6 +10,10 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 find_package(PNG REQUIRED)
 find_package(Threads REQUIRED)
+find_package(Freetype REQUIRED)
+find_file(RT2_FONT_FILE NAMES DejaVuSans.ttf
+    PATHS /usr/share/fonts/truetype/dejavu
+    DOC "DejaVu Sans outline font used by the demo and text geometry tests" REQUIRED)
 
 add_library(rply STATIC third_party/rply/rply.c)
 target_include_directories(rply PUBLIC third_party/rply)
@@ -29,8 +33,9 @@ target_sources(rt2
 
 target_compile_features(rt2 PRIVATE cxx_std_23)
 target_compile_definitions(rt2 PRIVATE RT2_MESH_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}/mesh")
+target_compile_definitions(rt2 PRIVATE RT2_FONT_FILE="${RT2_FONT_FILE}")
 target_compile_options(rt2 PRIVATE -march=native)
-target_link_libraries(rt2 PRIVATE PNG::PNG Threads::Threads rply)
+target_link_libraries(rt2 PRIVATE PNG::PNG Threads::Threads Freetype::Freetype rply)
 
 include(CTest)
 if(BUILD_TESTING)
@@ -41,6 +46,7 @@ if(BUILD_TESTING)
         tests/model/sor.cpp
         tests/model/mesh.cpp
         tests/model/ply.cpp
+        tests/model/text.cpp
         tests/model/object.cpp
         tests/model/torus.cpp
         tests/model/scene.cpp
@@ -52,8 +58,9 @@ if(BUILD_TESTING)
     )
     target_compile_features(rt2_tests PRIVATE cxx_std_23)
     target_compile_options(rt2_tests PRIVATE -march=native)
-    target_link_libraries(rt2_tests PRIVATE Threads::Threads rply)
-    foreach(suite IN ITEMS model/sor model/mesh model/ply model/object model/torus model/scene renderer/renderer)
+    target_compile_definitions(rt2_tests PRIVATE RT2_FONT_FILE="${RT2_FONT_FILE}")
+    target_link_libraries(rt2_tests PRIVATE Threads::Threads Freetype::Freetype rply)
+    foreach(suite IN ITEMS model/sor model/mesh model/ply model/text model/object model/torus model/scene renderer/renderer)
         add_test(NAME ${suite} COMMAND rt2_tests ${suite})
     endforeach()
 endif()
