@@ -29,14 +29,17 @@ If needed, set `-DRT2_FONT_FILE=/path/to/DejaVuSans.ttf` when configuring.
 The tests expect DejaVu Sans, not an arbitrary replacement font.
 The build enables native CPU optimization; binaries may not run on older CPUs.
 
-## Demo asset
+## Demo assets
 
-Both demo scenes require Artec's [Fantasy Dragon](https://www.artec3d.com/3d-models/fantasy-dragon),
-provided separately. Extract the PLY and its accompanying license to:
+Both demo scenes require Artec's [Fantasy Dragon](https://www.artec3d.com/3d-models/fantasy-dragon)
+and Dragon models, provided separately. Extract the PLY files and their
+accompanying licenses to:
 
 ```text
 mesh/fantasy-dragon-ply/Fantasy Dragon.ply
 mesh/fantasy-dragon-ply/license.txt
+mesh/dragon-ply/Dragon-ply.ply
+mesh/dragon-ply/license.txt
 ```
 
 The mesh directory is ignored by Git; assets are not downloaded automatically.
@@ -61,4 +64,4 @@ and contributors, licensed
 under the [Boost Software License 1.0](LICENSE).
 Dependencies and assets retain their own licenses; see
 [third-party notices and image attribution](THIRD_PARTY_NOTICES.md).
-In particular, published renders containing the dragon need its attribution.
+In particular, published renders containing the dragons need their attribution.

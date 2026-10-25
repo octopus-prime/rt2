@@ -188,6 +188,21 @@ generated PNGs. The dragon's attribution obligations still apply to images
 depicting it. Font files and other assets you substitute may have different
 terms; check them separately.
 
+## Additional Dragon model
+
+**Dragon by Artec Group inc.** (<https://www.artec3d.com/>), supplied as
+`mesh/dragon-ply/Dragon-ply.ply`, is also licensed under **CC BY 3.0** according
+to its accompanying `mesh/dragon-ply/license.txt`. Preserve that file when
+redistributing the model. It is separate from Fantasy Dragon above.
+
+Both demos additionally contain this model with generated smooth normals,
+an upright rotation, scaled/rotated instances and a jade-green material.
+Include this additional credit when publishing their renders:
+
+> Contains "Dragon" by Artec Group inc., https://www.artec3d.com/,
+> licensed under CC BY 3.0, https://creativecommons.org/licenses/by/3.0/.
+> Rendered in rt2 with generated normals, transformed instances and a jade-green material.
+
 ## Distribution scope
 
 Ship this notice and the RPly notices with rt2 binary releases. When bundling
