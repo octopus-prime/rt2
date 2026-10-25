@@ -28,7 +28,7 @@ vector_t phong_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene
             .origin = hit.point,
             .direction = light_dir,
             .min = ray_epsilon,
-            .max = boost::qvm::mag(to_light) - ray_epsilon
+            .max = std::min(ray_max, boost::qvm::mag(to_light) - ray_epsilon)
         };
         if (scene.occluded(shadow_ray)) {
             continue;

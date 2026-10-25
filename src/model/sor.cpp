@@ -114,6 +114,12 @@ sor_t::sor_t(const std::vector<std::array<scalar_t, 2>>& profile) : max_radius(0
     }
 }
 
+std::optional<box3_t> sor_t::bounds() const {
+    // PCHIP preserves the sample range.
+    return box3_t{point3_t{-max_radius, -max_radius, segments.front().lower},
+        point3_t{max_radius, max_radius, segments.back().upper}};
+}
+
 std::optional<hit_t> sor_t::intersect(const ray_t& ray) const {
     const auto& origin = ray.origin;
     const auto& direction = ray.direction;

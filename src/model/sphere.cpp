@@ -10,6 +10,10 @@ import :math;
 
 namespace rt2::model {
 
+std::optional<box3_t> sphere_t::bounds() const {
+    return box3_t{point3_t{-1, -1, -1}, point3_t{1, 1, 1}};
+}
+
 // static_assert(Intersectable<sphere_t>);
 
 std::optional<hit_t> sphere_t::intersect(const ray_t& ray) const {

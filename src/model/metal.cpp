@@ -1,7 +1,6 @@
 module;
 
 #include <cmath>
-#include <limits>
 #include <stdexcept>
 #include <boost/qvm.hpp>
 
@@ -26,7 +25,7 @@ vector_t metal_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene
         .origin = hit.point,
         .direction = boost::qvm::normalized(reflected),
         .min = ray_epsilon,
-        .max = std::numeric_limits<scalar_t>::infinity()
+        .max = ray_max
     }, remaining_depth - 1);
     return {reflectance.a[0] * color.a[0], reflectance.a[1] * color.a[1],
         reflectance.a[2] * color.a[2]};

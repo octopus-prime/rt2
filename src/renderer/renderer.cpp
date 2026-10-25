@@ -60,7 +60,7 @@ void render(const model::scene_t& scene, boost::gil::rgb8_view_t pixels, unsigne
                 .origin = camera.origin,
                 .direction = direction,
                 .min = 0,
-                .max = std::numeric_limits<scalar_t>::infinity()
+                .max = model::ray_max
             };
             const auto color = scene.trace(ray, depth);
             pixels(x, y) = pixel_t(channel(color.a[0]), channel(color.a[1]), channel(color.a[2]));

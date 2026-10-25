@@ -8,6 +8,10 @@ module model;
 
 namespace rt2::model {
 
+std::optional<box3_t> plane_t::bounds() const {
+    return std::nullopt;
+}
+
 std::optional<hit_t> plane_t::intersect(const ray_t& ray) const {
     auto denom = ray.direction.a[2];
     if (std::abs(denom) < 1e-6f) {
