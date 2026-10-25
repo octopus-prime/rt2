@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -51,18 +52,28 @@ void render(const model::scene_t& scene, boost::gil::rgb8_view_t pixels, unsigne
     };
 
     const auto render_row = [&](int y) {
+        constexpr std::array<std::array<scalar_t, 2>, 4> samples{{
+            {scalar_t{0.375f}, scalar_t{0.125f}},
+            {scalar_t{0.875f}, scalar_t{0.375f}},
+            {scalar_t{0.125f}, scalar_t{0.625f}},
+            {scalar_t{0.625f}, scalar_t{0.875f}}
+        }};
         for (int x = 0; x < width; ++x) {
-            const scalar_t screen_x = (2 * (x + 0.5f) / width - 1) * half_width;
-            const scalar_t screen_y = (1 - 2 * (y + 0.5f) / height) * half_height;
-            const vector_t direction = boost::qvm::normalized(
-                forward + screen_x * right + screen_y * up);
-            const model::ray_t ray{
-                .origin = camera.origin,
-                .direction = direction,
-                .min = 0,
-                .max = model::ray_max
-            };
-            const auto color = scene.trace(ray, depth);
+            vector_t color{0, 0, 0};
+            for (const auto& sample : samples) {
+                const scalar_t screen_x = (2 * (x + sample[0]) / width - 1) * half_width;
+                const scalar_t screen_y = (1 - 2 * (y + sample[1]) / height) * half_height;
+                const vector_t direction = boost::qvm::normalized(
+                    forward + screen_x * right + screen_y * up);
+                const model::ray_t ray{
+                    .origin = camera.origin,
+                    .direction = direction,
+                    .min = 0,
+                    .max = model::ray_max
+                };
+                color += scene.trace(ray, depth);
+            }
+            color /= static_cast<scalar_t>(samples.size());
             pixels(x, y) = pixel_t(channel(color.a[0]), channel(color.a[1]), channel(color.a[2]));
         }
     };
