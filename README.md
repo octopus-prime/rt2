@@ -49,7 +49,7 @@ Its absolute source-directory path is configured at build time.
 
 ```sh
 ./build/rt2                    # Default scene -> output.png
-./build/rt2 --many             # 400 objects + floor -> output-many.png
+./build/rt2 --many             # 100 x 100 objects + floor -> output-many.png
 ./build/rt2 --many --benchmark # Warm-up + five renders; median/checksum, no PNG
 ```
 

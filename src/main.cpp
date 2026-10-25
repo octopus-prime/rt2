@@ -46,7 +46,7 @@ int main(int argc, char** argv) try {
             benchmark = true;
         } else if (argument == "--help") {
             std::println("Usage: rt2 [--many] [--benchmark]\n"
-                "  --many       Render a second scene with 400 bounded objects and one plane.\n"
+                "  --many       Render a second scene with 10,000 bounded objects and one plane.\n"
                 "  --benchmark  Warm up, time five renders, print median and pixel checksum;\n"
                 "               skip PNG output. Scene construction is not timed.");
             return 0;
@@ -250,15 +250,17 @@ int main(int argc, char** argv) try {
     }
 
     if (many_objects) {
+        constexpr int grid_size = 100;
+        constexpr scalar_t grid_center = scalar_t{grid_size - 1} / 2;
         objects_t objects;
-        objects.reserve(401);
-        for (int row = 0; row < 20; ++row) {
-            for (int column = 0; column < 20; ++column) {
+        objects.reserve(grid_size * grid_size + 1);
+        for (int row = 0; row < grid_size; ++row) {
+            for (int column = 0; column < grid_size; ++column) {
                 const vector_t origin{
-                    (static_cast<scalar_t>(column) - 9.5f) * 2.2f,
+                    (static_cast<scalar_t>(column) - grid_center) * 2.2f,
                     -2,
-                    (static_cast<scalar_t>(row) - 9.5f) * 2.2f};
-                const int kind = (row * 20 + column) % 10;
+                    (static_cast<scalar_t>(row) - grid_center) * 2.2f};
+                const int kind = (row * grid_size + column) % 10;
                 if (kind == 0) {
                     auto object = make_sor(
                         sor_t{{{0, 0.55f}, {0.3f, 0.8f}, {1.1f, 0.9f},
