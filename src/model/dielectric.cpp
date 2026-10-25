@@ -2,7 +2,6 @@ module;
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <stdexcept>
 #include <boost/qvm.hpp>
 
@@ -32,7 +31,7 @@ vector_t dielectric_t::eluminate(const hit_t& hit, const ray_t& incoming, const 
             .origin = hit.point,
             .direction = boost::qvm::normalized(direction),
             .min = ray_epsilon,
-            .max = std::numeric_limits<scalar_t>::infinity()
+            .max = ray_max
         }, remaining_depth - 1);
     };
     if (refractive_index == 1) {

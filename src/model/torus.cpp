@@ -4,6 +4,7 @@ module;
 #include <optional>
 #include <algorithm>
 #include <ranges>
+#include <cmath>
 #include <boost/qvm.hpp>
 #include <boost/math/tools/quartic_roots.hpp>
 
@@ -12,6 +13,12 @@ module model;
 import :math;
 
 namespace rt2::model {
+
+std::optional<box3_t> torus_t::bounds() const {
+    const scalar_t minor = std::sqrt(minor_radius_squared);
+    const scalar_t radius = std::sqrt(major_radius_squared) + minor;
+    return box3_t{point3_t{-radius, -radius, -minor}, point3_t{radius, radius, minor}};
+}
 
 std::optional<hit_t> torus_t::intersect(const ray_t& ray) const {
     const scalar_t a = boost::qvm::mag_sqr(ray.direction);

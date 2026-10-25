@@ -19,13 +19,19 @@ struct object_t {
     surface_t surface;
     shader_t shader;
     matrix_t scene_object = boost::qvm::identity_mat<scalar_t, 4>();
-    matrix_t object_scene = boost::qvm::identity_mat<scalar_t, 4>();
+    matrix_t object_scene = boost::qvm::inverse(scene_object);
+    std::optional<box3_t> scene_bounds = transformed_bounds();
 
+    // Call after directly changing surface or scene_object; translate/scale do this automatically.
+    void update_transform();
     object_t& translate(const vector_t& offset);
     object_t& scale(const vector_t& factors);
 
     std::optional<hit_t> intersect(const ray_t& ray) const;
     vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const;
+
+private:
+    std::optional<box3_t> transformed_bounds() const;
 };
 
 using objects_t = std::vector<object_t>;
