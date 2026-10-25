@@ -13,6 +13,12 @@ import :math;
 
 namespace rt2::model {
 
+bool torus_t::inside(const vector_t& point) const {
+    validate_point(point);
+    return std::hypot(std::hypot(point.a[0], point.a[1])
+        - std::sqrt(major_radius_squared), point.a[2]) < std::sqrt(minor_radius_squared);
+}
+
 std::optional<box3_t> torus_t::bounds() const {
     const scalar_t minor = std::sqrt(minor_radius_squared);
     const scalar_t radius = std::sqrt(major_radius_squared) + minor;

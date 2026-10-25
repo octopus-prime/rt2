@@ -9,6 +9,10 @@ module model;
 import :math;
 
 namespace rt2::model {
+bool sphere_t::inside(const vector_t& point) const {
+    validate_point(point);
+    return std::hypot(point.a[0], point.a[1], point.a[2]) < 1;
+}
 
 std::optional<box3_t> sphere_t::bounds() const {
     return box3_t{point3_t{-1, -1, -1}, point3_t{1, 1, 1}};

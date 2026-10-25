@@ -128,6 +128,17 @@ void test_rotations() {
 }
 
 void test_object() {
+    object_t object{.surface = surface_t{sphere_t{}}, .shader = shader_t{phong_t{}}};
+    object.scale({-2, 0.5f, 3}).rotate_z(std::numbers::pi_v<scalar_t> / 4)
+        .translate({5, 2, -1});
+    check(object.inside({5, 2, -1}), "Transformed object interior");
+    const auto exterior = boost::qvm::transform_point(object.scene_object, vector_t{1.2f, 0, 0});
+    check(!object.inside(exterior), "Transformed ellipsoid exterior");
+    auto instance = object;
+    instance.translate({10, 0, 0});
+    check(!instance.inside({5, 2, -1}) && object.inside({5, 2, -1}),
+        "Inside respects independent instance transforms");
+    check_inside_rejects_nonfinite(object);
     test_object_bounds();
     test_rotations();
 }

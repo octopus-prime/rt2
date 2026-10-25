@@ -33,4 +33,18 @@ inline ray_t ray(vector_t origin, vector_t direction, scalar_t min = 0,
     return {.origin = origin, .direction = direction, .min = min, .max = max};
 }
 
+template<class Surface>
+void check_inside_rejects_nonfinite(const Surface& surface) {
+    for (const auto value : {std::numeric_limits<scalar_t>::quiet_NaN(),
+             std::numeric_limits<scalar_t>::infinity()}) {
+        bool threw = false;
+        try {
+            surface.inside({0, value, 0});
+        } catch (const std::invalid_argument&) {
+            threw = true;
+        }
+        check(threw, "Inside must reject nonfinite points");
+    }
+}
+
 } // namespace rt2::tests

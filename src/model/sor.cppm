@@ -18,6 +18,7 @@ public:
     // Samples are {height, radius}, with increasing heights and positive radii.
     explicit sor_t(const std::vector<std::array<scalar_t, 2>>& profile);
 
+    bool inside(const vector_t& point) const;
     std::optional<box3_t> bounds() const;
     std::optional<hit_t> intersect(const ray_t& ray) const;
 

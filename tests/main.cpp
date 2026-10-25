@@ -12,8 +12,11 @@ void test_sor();
 void test_mesh();
 void test_ply();
 void test_text();
+void test_sphere();
+void test_plane();
+void test_surface();
 void test_object();
-void test_torus_precision();
+void test_torus();
 void test_scene_index();
 void test_rotated_grid_aa();
 
@@ -21,13 +24,16 @@ void test_rotated_grid_aa();
 
 int main(int argc, char** argv) {
     using namespace rt2::tests;
-    const std::array<std::pair<std::string_view, void (*)()>, 8> suites{{
+    const std::array<std::pair<std::string_view, void (*)()>, 11> suites{{
         {"model/sor", test_sor},
         {"model/mesh", test_mesh},
         {"model/ply", test_ply},
         {"model/text", test_text},
+        {"model/sphere", test_sphere},
+        {"model/plane", test_plane},
+        {"model/surface", test_surface},
         {"model/object", test_object},
-        {"model/torus", test_torus_precision},
+        {"model/torus", test_torus},
         {"model/scene", test_scene_index},
         {"renderer/renderer", test_rotated_grid_aa}
     }};

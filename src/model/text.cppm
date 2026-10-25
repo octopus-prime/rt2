@@ -25,7 +25,7 @@ struct text_t {
 
     std::optional<box3_t> bounds() const;
     std::optional<hit_t> intersect(const ray_t& ray) const;
-    // Strictly between the caps; outline boundaries use a half-open crossing rule.
+    // Strict interior; caps and outline boundaries are excluded.
     bool inside(const vector_t& point) const;
 
 private:

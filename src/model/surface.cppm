@@ -22,6 +22,8 @@ struct surface_t {
 
     // nullopt denotes an unbounded surface.
     std::optional<box3_t> bounds() const;
+    // Strict interior, boundaries excluded. Non-finite points throw invalid_argument.
+    bool inside(const vector_t& point) const;
     std::optional<hit_t> intersect(const ray_t& ray) const;
 };
 

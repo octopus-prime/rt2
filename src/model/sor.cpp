@@ -23,6 +23,19 @@ namespace rt2::model {
 using polynomial_t = boost::container::static_vector<scalar_t, 7>;
 using roots_t = boost::container::static_vector<scalar_t, 13>;
 
+bool sor_t::inside(const vector_t& point) const {
+    validate_point(point);
+    const scalar_t z = point.a[2];
+    if (z <= segments.front().lower || z >= segments.back().upper) {
+        return false;
+    }
+    const auto segment = std::ranges::find_if(segments,
+        [z](const auto& value) { return z <= value.upper; });
+    const scalar_t radius = boost::math::tools::evaluate_polynomial(
+        segment->radius.data(), z - segment->lower, segment->radius.size());
+    return std::hypot(point.a[0], point.a[1]) < radius;
+}
+
 constexpr scalar_t root_tolerance = 8 * std::numeric_limits<scalar_t>::epsilon();
 
 // Derivative roots split [0, 1] into monotone intervals. Testing the split

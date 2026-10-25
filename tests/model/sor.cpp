@@ -99,6 +99,14 @@ void test_invalid_profiles() {
 }
 
 void test_sor() {
+    const sor_t cylinder{{{0, 1}, {1, 1}, {2, 1}, {3, 1}}};
+    check(cylinder.inside({0.5f, 0, 1}) && cylinder.inside({0, 0, 2}), "SOR segments");
+    check(!cylinder.inside({1, 0, 1}) && !cylinder.inside({0, 0, 0})
+        && !cylinder.inside({0, 0, 3}) && !cylinder.inside({0, 0, 4}), "SOR boundaries");
+    const sor_t tapered{{{0, 1}, {1, 2}, {2, 3}, {3, 4}}};
+    check(tapered.inside({2.4f, 0, 1.5f}) && !tapered.inside({2.6f, 0, 1.5f}),
+        "SOR interpolated radius");
+    check_inside_rejects_nonfinite(cylinder);
     test_cylinder();
     test_curved_profile();
     test_invalid_profiles();

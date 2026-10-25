@@ -53,6 +53,13 @@ struct cubic_font_t {
 }
 
 void test_text() {
+    const text_t text{RT2_FONT_FILE, "H", 0.25f};
+    check(text.inside({0.15f, 0.2f, 0.125f}), "Text interior");
+    const auto edge = text.intersect(ray({-1, 0.2f, 0.125f}, {1, 0, 0}));
+    check(edge.has_value() && !text.inside(edge->point), "Text side boundary");
+    const auto other_edge = text.intersect(ray({0.3f, 0.2f, 0.125f}, {-1, 0, 0}));
+    check(other_edge.has_value() && !text.inside(other_edge->point), "Opposite text boundary");
+    check_inside_rejects_nonfinite(text);
     const std::filesystem::path font{RT2_FONT_FILE};
     const text_t h{font, "H", 0.25f};
     const vector_t stem{0.15f, 0.2f, 0.125f};

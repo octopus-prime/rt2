@@ -7,6 +7,10 @@ module;
 module model;
 
 namespace rt2::model {
+bool plane_t::inside(const vector_t& point) const {
+    validate_point(point);
+    return point.a[2] < 0;
+}
 
 std::optional<box3_t> plane_t::bounds() const {
     return std::nullopt;

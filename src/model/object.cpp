@@ -18,6 +18,11 @@ import :shader;
 
 namespace rt2::model {
 
+bool object_t::inside(const vector_t& point) const {
+    validate_point(point);
+    return surface.inside(boost::qvm::transform_point(object_scene, point));
+}
+
 std::optional<box3_t> object_t::transformed_bounds() const {
     const auto local = surface.bounds();
     if (!local) {

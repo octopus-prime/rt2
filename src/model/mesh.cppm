@@ -24,6 +24,11 @@ struct mesh_t {
     mesh_t(std::vector<vector_t> vertices, std::vector<face_t> faces);
 
     std::optional<box3_t> bounds() const;
+    // Strict interior of a non-self-intersecting closed solid (even-odd fill).
+    // Lazily checks indexed edges for paired opposite winding; otherwise throws
+    // std::logic_error. Self-intersections are a caller precondition, not checked.
+    // Duplicate seam vertices must be welded for solid queries, not for rendering.
+    bool inside(const vector_t& point) const;
     // Two-sided intersection; normals retain the mesh's winding orientation.
     std::optional<hit_t> intersect(const ray_t& ray) const;
 

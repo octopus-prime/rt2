@@ -47,6 +47,9 @@ if(BUILD_TESTING)
         tests/model/mesh.cpp
         tests/model/ply.cpp
         tests/model/text.cpp
+        tests/model/sphere.cpp
+        tests/model/plane.cpp
+        tests/model/surface.cpp
         tests/model/object.cpp
         tests/model/torus.cpp
         tests/model/scene.cpp
@@ -60,7 +63,7 @@ if(BUILD_TESTING)
     target_compile_options(rt2_tests PRIVATE -march=native)
     target_compile_definitions(rt2_tests PRIVATE RT2_FONT_FILE="${RT2_FONT_FILE}")
     target_link_libraries(rt2_tests PRIVATE Threads::Threads Freetype::Freetype rply)
-    foreach(suite IN ITEMS model/sor model/mesh model/ply model/text model/object model/torus model/scene renderer/renderer)
+    foreach(suite IN ITEMS model/sor model/mesh model/ply model/text model/sphere model/plane model/surface model/object model/torus model/scene renderer/renderer)
         add_test(NAME ${suite} COMMAND rt2_tests ${suite})
     endforeach()
 endif()

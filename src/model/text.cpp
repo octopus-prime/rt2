@@ -50,6 +50,31 @@ struct text_glyph_t {
     scalar_t normal_sign;
     bool even_odd;
 
+    bool on_boundary(const vector_t& point) const {
+        for (const auto& curve : curves) {
+            const scalar_t x_span = std::abs(curve.x[1]) + std::abs(curve.x[2])
+                + std::abs(curve.x[3]);
+            const scalar_t y_span = std::abs(curve.y[1]) + std::abs(curve.y[2])
+                + std::abs(curve.y[3]);
+            const bool solve_x = x_span > y_span;
+            const auto& p = solve_x ? curve.x : curve.y;
+            const auto roots = boost::math::tools::cubic_roots(
+                p[3], p[2], p[1], p[0] - point.a[solve_x ? 0 : 1]);
+            const scalar_t tolerance = 16 * std::numeric_limits<scalar_t>::epsilon()
+                * std::max({scalar_t{1}, std::abs(point.a[0]), std::abs(point.a[1]),
+                    x_span, y_span});
+            const auto matches = [&](scalar_t t) {
+                return t >= 0 && t <= 1
+                    && std::abs(evaluate(curve.x, t) - point.a[0]) <= tolerance
+                    && std::abs(evaluate(curve.y, t) - point.a[1]) <= tolerance;
+            };
+            if (matches(0) || matches(1) || std::ranges::any_of(roots, matches)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool contains(const vector_t& point) const {
         int winding = 0;
         for (const auto& curve : curves) {
@@ -295,13 +320,15 @@ std::optional<box3_t> text_t::bounds() const {
 }
 
 bool text_t::inside(const vector_t& point) const {
+    validate_point(point);
     if (!(point.a[2] > 0 && point.a[2] < data->extrusion)) {
         return false;
     }
     const auto predicate = boost::geometry::index::intersects(
         point3_t{point.a[0], point.a[1], point.a[2]});
     for (auto it = data->index.qbegin(predicate); it != data->index.qend(); ++it) {
-        if (data->glyphs[it->second].contains(point)) {
+        const auto& glyph = data->glyphs[it->second];
+        if (!glyph.on_boundary(point) && glyph.contains(point)) {
             return true;
         }
     }

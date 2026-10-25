@@ -32,6 +32,7 @@ struct object_t {
     object_t& rotate_z(const scalar_t angle);
 
     std::optional<hit_t> intersect(const ray_t& ray) const;
+    bool inside(const vector_t& point) const;
     vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const;
 
 private:

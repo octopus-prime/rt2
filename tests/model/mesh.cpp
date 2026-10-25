@@ -1,5 +1,6 @@
 #include <array>
 #include <limits>
+#include <thread>
 #include <utility>
 #include <vector>
 #include <boost/geometry/core/access.hpp>
@@ -8,8 +9,87 @@
 #include "../support.hpp"
 
 namespace rt2::tests {
+namespace {
+
+mesh_t cube(bool reverse = false, bool open = false, bool cavity = false) {
+    std::vector<vector_t> vertices{
+        {-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1},
+        {-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1}};
+    std::vector<mesh_t::face_t> faces{
+        {0, 2, 1}, {0, 3, 2}, {4, 5, 6}, {4, 6, 7},
+        {0, 1, 5}, {0, 5, 4}, {3, 7, 6}, {3, 6, 2},
+        {0, 4, 7}, {0, 7, 3}, {1, 2, 6}, {1, 6, 5}};
+    if (open) {
+        faces.pop_back();
+    }
+    if (reverse) {
+        for (auto& face : faces) {
+            std::swap(face[1], face[2]);
+        }
+    }
+    if (cavity) {
+        const auto outer_vertices = vertices;
+        const auto outer_faces = faces;
+        for (const auto& vertex : outer_vertices) {
+            vertices.push_back(vertex * scalar_t{0.5f});
+        }
+        for (const auto& face : outer_faces) {
+            faces.push_back({face[0] + 8, face[2] + 8, face[1] + 8});
+        }
+    }
+    return {std::move(vertices), std::move(faces)};
+}
+
+void test_mesh_inside() {
+    const auto mesh = cube();
+    const auto reversed = cube(true);
+    for (const auto& point : std::array<vector_t, 4>{
+            vector_t{0, 0, 0}, {0.2f, 0.3f, 0.4f}, {-0.9f, 0.5f, 0.5f}, {0, -0.5f, 0.5f}}) {
+        check(mesh.inside(point) && reversed.inside(point), "Mesh interior and reversed winding");
+    }
+    for (const auto& point : std::array<vector_t, 9>{
+            vector_t{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, 0, -1},
+            {1, 1, 0}, {1, 1, 1}, {-2, 1, 1}, {-2, 1, 0}, {-2, 0, 0}}) {
+        check(!mesh.inside(point), "Mesh faces, edges, vertices and tangent rays excluded");
+    }
+    const auto open = cube(false, true);
+    for (int i = 0; i < 2; ++i) {
+        bool threw = false;
+        try {
+            open.inside({0, 0, 0});
+        } catch (const std::logic_error&) {
+            threw = true;
+        }
+        check(threw, "Open mesh reports unsupported inside, including cached validation");
+    }
+    check(open.intersect(ray({0, 0, -3}, {0, 0, 1})).has_value(),
+        "Open mesh still renders");
+    const auto hollow = cube(false, false, true);
+    check(!hollow.inside({0, 0, 0}) && hollow.inside({0.75f, 0, 0})
+        && !hollow.inside({0.5f, 0, 0}), "Mesh cavity and inner boundary");
+    for (int i = -13; i <= 13; ++i) {
+        for (int j = -13; j <= 13; ++j) {
+            const vector_t point{static_cast<scalar_t>(i) / 10,
+                static_cast<scalar_t>(j) / 10, scalar_t{0.137f}};
+            check(mesh.inside(point) == (std::abs(i) < 10 && std::abs(j) < 10),
+                "Mesh containment matches analytical box");
+        }
+    }
+    const auto shared = cube();
+    const auto shared_copy = shared;
+    std::array<bool, 2> answers{};
+    std::thread first{[&] { answers[0] = shared.inside({0, 0, 0}); }};
+    std::thread second{[&] { answers[1] = shared_copy.inside({0, 0, 0}); }};
+    first.join();
+    second.join();
+    check(answers[0] && answers[1], "Shared mesh solid validation is thread-safe");
+    check_inside_rejects_nonfinite(mesh);
+}
+
+}
 
 void test_mesh() {
+    test_mesh_inside();
     const mesh_t triangle{{{0, 0, 0}, {1, 0, 0}, {0, 1, 0}}, {{0, 1, 2}}};
     const auto bounds = triangle.bounds();
     check(bounds.has_value(), "Mesh bounds required");

@@ -57,6 +57,23 @@ Rendering is 3840 x 2160 with four samples per pixel. PNGs are written to the
 current working directory. Benchmark timing excludes scene construction.
 Mesh and text instances share immutable geometry and their internal R-trees.
 
+## Point containment
+
+All surfaces expose `bool inside(const vector_t&) const` in local coordinates;
+`object_t::inside` accepts scene coordinates and applies the cached inverse
+transform. Boundary points are excluded. The plane's interior is `z < 0`;
+SOR and text interiors lie strictly between their caps. Non-finite query
+points throw `std::invalid_argument`.
+
+Mesh containment uses even-odd fill and the triangle R-tree. Its first query
+lazily checks that every indexed edge has exactly two oppositely wound faces;
+the result is shared and thread-safe. Open, nonmanifold-edge or inconsistently
+wound meshes throw `std::logic_error` from `inside()` but still support rendering.
+Solid queries require non-self-intersecting geometry; self-intersections are
+not validated. Weld duplicate seam vertices before solid queries.
+Mesh/text boundary detection uses floating-point tolerances, so points
+extremely close to a boundary may also be excluded.
+
 ## Licenses
 
 rt2's own code is copyright (c) 2026 [octopus-prime](https://github.com/octopus-prime)
