@@ -32,13 +32,22 @@ include(CTest)
 if(BUILD_TESTING)
     set(test_sources ${source_files})
     list(REMOVE_ITEM test_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
-    add_executable(sor_tests tests/sor.cpp)
-    target_sources(sor_tests
+    add_executable(rt2_tests
+        tests/main.cpp
+        tests/model/sor.cpp
+        tests/model/object.cpp
+        tests/model/torus.cpp
+        tests/model/scene.cpp
+        tests/renderer/renderer.cpp
+    )
+    target_sources(rt2_tests
         PRIVATE FILE_SET CXX_MODULES FILES ${module_sources}
         PRIVATE ${test_sources}
     )
-    target_compile_features(sor_tests PRIVATE cxx_std_23)
-    target_compile_options(sor_tests PRIVATE -march=native)
-    target_link_libraries(sor_tests PRIVATE Threads::Threads)
-    add_test(NAME sor COMMAND sor_tests)
+    target_compile_features(rt2_tests PRIVATE cxx_std_23)
+    target_compile_options(rt2_tests PRIVATE -march=native)
+    target_link_libraries(rt2_tests PRIVATE Threads::Threads)
+    foreach(suite IN ITEMS model/sor model/object model/torus model/scene renderer/renderer)
+        add_test(NAME ${suite} COMMAND rt2_tests ${suite})
+    endforeach()
 endif()
