@@ -1,5 +1,6 @@
 #include <chrono>
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <exception>
@@ -279,8 +280,14 @@ int main(int argc, char** argv) try {
                 } else {
                     const auto& shader = kind % 3 == 0 ? copper.shader
                         : kind % 3 == 1 ? blue.shader : coral.shader;
-                    objects.push_back(make_sphere(origin + vector_t{0, 0.7f, 0},
-                        0.7f, shader));
+                    const scalar_t phase = quarter_turn * static_cast<scalar_t>(row) / 2;
+                    const scalar_t strain = kind % 3 == 0 ? scalar_t{0}
+                        : scalar_t{0.4f} * std::sin(phase);
+                    const scalar_t scale_y = 1 - strain;
+                    auto sphere = make_sphere({0, 0, 0}, 0.7f, shader);
+                    sphere.scale({1 + strain, scale_y, 1})
+                        .translate(origin + vector_t{0, scalar_t{0.7f} * scale_y, 0});
+                    objects.push_back(std::move(sphere));
                 }
             }
         }
