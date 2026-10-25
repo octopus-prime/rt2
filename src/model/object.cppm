@@ -31,6 +31,8 @@ struct object_t {
     vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const;
 
 private:
+    friend struct scene_t;
+    std::optional<hit_t> intersect_surface(const ray_t& ray) const;
     std::optional<box3_t> transformed_bounds() const;
 };
 

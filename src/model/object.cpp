@@ -4,10 +4,8 @@ module;
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <stdexcept>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/core/access.hpp>
-#include <boost/geometry/geometries/segment.hpp>
 #include <boost/qvm.hpp>
 
 module model;
@@ -81,22 +79,19 @@ object_t& object_t::scale(const vector_t& factors) {
 }
 
 std::optional<hit_t> object_t::intersect(const ray_t& ray) const {
-    if (!std::isfinite(ray.min) || !std::isfinite(ray.max)) {
-        throw std::invalid_argument("Object intersection requires finite ray limits");
-    }
+    const auto segment = ray.segment();
     if (ray.min > ray.max) {
         return std::nullopt;
     }
     if (scene_bounds) {
-        const auto begin = ray(ray.min);
-        const auto end = ray(ray.max);
-        const boost::geometry::model::segment<point3_t> segment{
-            point3_t{begin.a[0], begin.a[1], begin.a[2]},
-            point3_t{end.a[0], end.a[1], end.a[2]}};
         if (!boost::geometry::intersects(segment, *scene_bounds)) {
             return std::nullopt;
         }
     }
+    return intersect_surface(ray);
+}
+
+std::optional<hit_t> object_t::intersect_surface(const ray_t& ray) const {
     const ray_t transformed_ray{
         .origin = boost::qvm::transform_point(object_scene, ray.origin),
         .direction = boost::qvm::transform_vector(object_scene, ray.direction),

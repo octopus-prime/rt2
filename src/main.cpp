@@ -1,5 +1,13 @@
 #include <chrono>
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
+#include <exception>
 #include <print>
+#include <stdexcept>
+#include <string_view>
+#include <utility>
+#include <vector>
 #include <boost/qvm.hpp>
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/png.hpp>
@@ -22,7 +30,25 @@ using image_t = bg::rgb8_image_t;
 
 // static_assert(Intersectable<scene_t>);
 
-int main() {
+int main(int argc, char** argv) try {
+    bool many_objects = false;
+    bool benchmark = false;
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view argument{argv[i]};
+        if (argument == "--many") {
+            many_objects = true;
+        } else if (argument == "--benchmark") {
+            benchmark = true;
+        } else if (argument == "--help") {
+            std::println("Usage: rt2 [--many] [--benchmark]\n"
+                "  --many       Render a second scene with 400 bounded objects and one plane.\n"
+                "  --benchmark  Warm up, time five renders, print median and pixel checksum;\n"
+                "               skip PNG output. Scene construction is not timed.");
+            return 0;
+        } else {
+            throw std::invalid_argument("Unknown argument; use --help for usage");
+        }
+    }
     const auto object1 = object_t{
         .surface = surface_t{sphere_t{}},
         .shader = shader_t{dielectric_t{.refractive_index = 1.5f}}
@@ -138,7 +164,7 @@ int main() {
         .intensity = {0.55f, 0.65f, 0.85f}
     };
 
-    const auto scene = scene_t{
+    auto scene = scene_t{
         .objects = {object1, object2, copper, blue, coral, silver, vase, spindle,
                     floor, ceiling, back, left, right},
         .lights = {light1, light2, light3},
@@ -150,16 +176,92 @@ int main() {
         }
     };
 
+    if (many_objects) {
+        objects_t objects;
+        objects.reserve(401);
+        for (int row = 0; row < 20; ++row) {
+            for (int column = 0; column < 20; ++column) {
+                const vector_t origin{
+                    (static_cast<scalar_t>(column) - 9.5f) * 2.2f,
+                    -2,
+                    (static_cast<scalar_t>(row) - 9.5f) * 2.2f};
+                const int kind = (row * 20 + column) % 10;
+                if (kind == 0) {
+                    auto object = make_sor(
+                        sor_t{{{0, 0.55f}, {0.3f, 0.8f}, {1.1f, 0.9f},
+                               {1.8f, 0.4f}, {2.5f, 0.3f}, {2.8f, 0.55f}}},
+                        {0, 0, 0}, vase.shader);
+                    object.scale({0.7f, 0.7f, 0.7f}).translate(origin);
+                    objects.push_back(object);
+                } else if (kind == 1) {
+                    auto object = object_t{
+                        .surface = surface_t{torus_t{4, 0.25f}},
+                        .shader = object2.shader};
+                    object.scale({0.4f, 0.4f, 0.4f})
+                        .translate(origin + vector_t{0, 1, 0});
+                    objects.push_back(object);
+                } else {
+                    const auto& shader = kind % 3 == 0 ? copper.shader
+                        : kind % 3 == 1 ? blue.shader : coral.shader;
+                    objects.push_back(make_sphere(origin + vector_t{0, 0.7f, 0},
+                        0.7f, shader));
+                }
+            }
+        }
+        objects.push_back(floor);
+        scene = scene_t{
+            .objects = std::move(objects),
+            .lights = {
+                light_t{.origin = {-20, 30, 20}, .intensity = {0.85f, 0.68f, 0.50f}},
+                light_t{.origin = {20, 25, 0}, .intensity = {0.25f, 0.48f, 0.75f}},
+                light_t{.origin = {0, 20, -20}, .intensity = {0.55f, 0.65f, 0.85f}}},
+            .camera = camera_t{
+                .origin = {0, 32, 48},
+                .direction = {0, -0.6f, -1},
+                .up = {0, 1, 0},
+                .fov = 55}
+        };
+    }
+
     constexpr int width = 3840;
     constexpr int height = 2160;
     image_t image(width, height);
+    std::println("Scene: {} ({} bounded, {} unbounded objects)",
+        many_objects ? "many" : "demo", scene.spatial_index.bounded.size(),
+        scene.spatial_index.unbounded.size());
+    if (benchmark) {
+        render(scene, bg::view(image));
+        std::vector<double> times;
+        for (int run = 0; run < 5; ++run) {
+            const auto start = std::chrono::steady_clock::now();
+            render(scene, bg::view(image));
+            const double milliseconds = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - start).count();
+            times.push_back(milliseconds);
+            std::println("Run {}: {:.2f} ms", run + 1, milliseconds);
+        }
+        std::ranges::sort(times);
+        std::uint64_t checksum = 14695981039346656037ULL;
+        const auto pixels = bg::const_view(image);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                for (int channel = 0; channel < 3; ++channel) {
+                    checksum ^= pixels(x, y)[channel];
+                    checksum *= 1099511628211ULL;
+                }
+            }
+        }
+        std::println("Median: {:.2f} ms; pixel checksum: {:016x}", times[2], checksum);
+        return 0;
+    }
     std::println("Rendering {}x{}...", width, height);
     const auto start_time = std::chrono::steady_clock::now();
     render(scene, bg::view(image));
     const auto end_time = std::chrono::steady_clock::now();
     std::println("Rendering time: {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count());
-    bg::write_view("output.png", bg::const_view(image), bg::png_tag{});
-    std::println("Saved output.png ({}x{})", width, height);
+    const char* output = many_objects ? "output-many.png" : "output.png";
+    bg::write_view(output, bg::const_view(image), bg::png_tag{});
+    std::println("Saved {} ({}x{})", output, width, height);
 
 
     // const auto ray = ray_t{
@@ -181,4 +283,7 @@ int main() {
     // }
 
     return 0;
+} catch (const std::exception& error) {
+    std::println(stderr, "Render failed: {}", error.what());
+    return 1;
 }
