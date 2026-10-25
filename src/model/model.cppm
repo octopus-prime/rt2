@@ -1,0 +1,19 @@
+export module model;
+
+export import :fwd;
+export import :math;
+export import :ray;
+export import :hit;
+export import :plane;
+export import :sphere;
+export import :torus;
+export import :sor;
+export import :surface;
+export import :phong;
+export import :dielectric;
+export import :metal;
+export import :shader;
+export import :object;
+export import :light;
+export import :camera;
+export import :scene;
