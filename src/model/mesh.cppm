@@ -4,6 +4,8 @@ module;
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <span>
+#include <cstddef>
 #include <vector>
 
 export module model:mesh;
@@ -30,7 +32,7 @@ struct mesh_t {
     // Duplicate seam vertices must be welded for solid queries, not for rendering.
     bool inside(const vector_t& point) const;
     // Two-sided intersection; normals retain the mesh's winding orientation.
-    std::optional<hit_t> intersect(const ray_t& ray) const;
+    std::size_t intersect(const ray_t& ray, std::span<hit_t> hits) const;
 
 private:
     struct data_t;

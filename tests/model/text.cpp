@@ -55,13 +55,14 @@ struct cubic_font_t {
 void test_text() {
     const text_t text{RT2_FONT_FILE, "H", 0.25f};
     check(text.inside({0.15f, 0.2f, 0.125f}), "Text interior");
-    const auto edge = text.intersect(ray({-1, 0.2f, 0.125f}, {1, 0, 0}));
+    const auto edge = nearest_hit(text, ray({-1, 0.2f, 0.125f}, {1, 0, 0}));
     check(edge.has_value() && !text.inside(edge->point), "Text side boundary");
-    const auto other_edge = text.intersect(ray({0.3f, 0.2f, 0.125f}, {-1, 0, 0}));
+    const auto other_edge = nearest_hit(text, ray({0.3f, 0.2f, 0.125f}, {-1, 0, 0}));
     check(other_edge.has_value() && !text.inside(other_edge->point), "Opposite text boundary");
     check_inside_rejects_nonfinite(text);
     const std::filesystem::path font{RT2_FONT_FILE};
     const text_t h{font, "H", 0.25f};
+    check_hit_distances(h, ray({0.15f, 0.2f, -1}, {0, 0, 1}), {1, 1.25f});
     const vector_t stem{0.15f, 0.2f, 0.125f};
     check(h.bounds().has_value(), "Text bounds");
     check(h.inside(stem), "H stem interior");
@@ -70,39 +71,42 @@ void test_text() {
         && !h.inside({0.15f, 0.2f, 0.3f}), "Text extrusion limits");
     check(!h.inside({0.15f, 0.2f, 0})
         && !h.inside({0.15f, 0.2f, 0.25f}), "Text cap boundary convention");
-    const auto front = h.intersect(ray({0.15f, 0.2f, -1}, {0, 0, 1}));
+    const auto front = nearest_hit(h, ray({0.15f, 0.2f, -1}, {0, 0, 1}));
     check(front.has_value(), "Text front cap");
     close(front->distance, 1, "Front distance");
     close(front->normal.a[2], -1, "Front outward normal");
-    const auto back = h.intersect(ray({0.15f, 0.2f, 1}, {0, 0, -1}));
+    const auto back = nearest_hit(h, ray({0.15f, 0.2f, 1}, {0, 0, -1}));
     check(back.has_value(), "Text back cap");
     close(back->distance, 0.75f, "Back distance");
     close(back->normal.a[2], 1, "Back outward normal");
-    const auto exit = h.intersect(ray(stem, {0, 0, 2}));
+    const auto exit = nearest_hit(h, ray(stem, {0, 0, 2}));
     check(exit.has_value(), "Inside ray exits text");
     close(exit->distance, 0.0625f, "Non-unit text ray");
-    check(!h.intersect(ray({0.15f, 0.2f, -1}, {0, 0, 1}, 0, 0.9f)),
+    check(!nearest_hit(h, ray({0.15f, 0.2f, -1}, {0, 0, 1}, 0, 0.9f)),
         "Text finite ray limit");
-    check(!h.intersect(ray(stem, {0, 0, 0})), "Text zero ray");
-    const auto beyond_front = h.intersect(ray({0.15f, 0.2f, -1}, {0, 0, 1}, 1.1f));
+    check(!nearest_hit(h, ray(stem, {0, 0, 0})), "Text zero ray");
+    const auto beyond_front = nearest_hit(h, ray({0.15f, 0.2f, -1}, {0, 0, 1}, 1.1f));
     check(beyond_front.has_value(), "Text skips cap before ray minimum");
     close(beyond_front->distance, 1.25f, "Text exit beyond ray minimum");
 
-    const auto side = h.intersect(ray({-1, 0.2f, 0.125f}, {1, 0, 0}));
+    const auto side = nearest_hit(h, ray({-1, 0.2f, 0.125f}, {1, 0, 0}));
     check(side.has_value(), "Linear outline side");
     close(side->normal.a[0], -1, "Linear side outward normal");
-    check(!h.intersect(ray({-1, 0.2f, 0.3f}, {1, 0, 0})), "Side beyond extrusion");
+    check(!nearest_hit(h, ray({-1, 0.2f, 0.3f}, {1, 0, 0})), "Side beyond extrusion");
     const text_t o{font, "O", 0.25f};
+    hit_buffer_t all_hits;
+    check(all_hits.intersect(o, ray({-1, 0.36f, 0.125f}, {1, 0, 0})).size() == 4,
+        "Text sides include all four hole crossings");
     check(!o.inside({0.39f, 0.36f, 0.125f}), "Curved glyph hole");
-    check(!o.intersect(ray({0.39f, 0.36f, -1}, {0, 0, 1})), "Cap preserves hole");
-    const auto outer = o.intersect(ray({-1, 0.36f, 0.125f}, {1, 0, 0}));
+    check(!nearest_hit(o, ray({0.39f, 0.36f, -1}, {0, 0, 1})), "Cap preserves hole");
+    const auto outer = nearest_hit(o, ray({-1, 0.36f, 0.125f}, {1, 0, 0}));
     check(outer.has_value(), "Quadratic outline side");
     check(outer->normal.a[0] < -0.99f, "Curve outer normal");
-    const auto inner = o.intersect(ray({0.39f, 0.36f, 0.125f}, {1, 0, 0}));
+    const auto inner = nearest_hit(o, ray({0.39f, 0.36f, 0.125f}, {1, 0, 0}));
     check(inner.has_value() && inner->normal.a[0] < -0.99f, "Hole side normal");
     const scalar_t ring_x = outer->point.a[0] + 0.04f;
     check(o.inside({ring_x, 0.36f, 0.125f}), "Curved glyph filled ring");
-    check(o.intersect(ray({ring_x, 0.36f, -1}, {0, 0, 1})).has_value(),
+    check(nearest_hit(o, ray({ring_x, 0.36f, -1}, {0, 0, 1})).has_value(),
         "Curved glyph cap");
     // At a contour's extremal Y, touching it must not fill the exterior.
     const auto top = boost::geometry::get<boost::geometry::max_corner, 1>(*o.bounds());
@@ -126,43 +130,43 @@ void test_text() {
         < boost::geometry::get<boost::geometry::max_corner, 0>(*separated.bounds()),
         "Kerning and advance");
     const text_t many{font, "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH", 0.25f};
-    check(many.intersect(ray({0.15f, 0.2f, -1}, {0, 0, 1})).has_value(),
+    check(nearest_hit(many, ray({0.15f, 0.2f, -1}, {0, 0, 1})).has_value(),
         "Multi-node glyph R-tree");
 
     const cubic_font_t fixture;
     const text_t cubic{fixture.file, "A", 0.25f};
     check(cubic.inside({0.5f, 0.5625f, 0.125f}), "Cubic fill");
     check(!cubic.inside({0.1f, 0.5625f, 0.125f}), "Outside cubic arch");
-    const auto cubic_side = cubic.intersect(
+    const auto cubic_side = nearest_hit(cubic,
         ray({-1.84375f, 1.0625f, 0.125f}, {1, -0.25f, 0}));
     check(cubic_side.has_value(), "Cubic polynomial side intersection");
     close(cubic_side->distance, 2, "Cubic side distance");
     close(cubic_side->normal.a[0], -0.8f, "PostScript cubic normal X");
     close(cubic_side->normal.a[1], 0.6f, "PostScript cubic normal Y");
-    const auto tangent = cubic.intersect(ray({-1, 0.75f, 0.125f}, {1, 0, 0}));
+    const auto tangent = nearest_hit(cubic, ray({-1, 0.75f, 0.125f}, {1, 0, 0}));
     check(tangent.has_value(), "Tangent curve intersection");
     close(tangent->distance, 1.5f, "Cubic tangent distance");
     close(tangent->normal.a[1], 1, "Cubic tangent normal");
     check(!cubic.inside({-0.1f, 0.75f, 0.125f}), "Tangent does not change winding");
-    const auto cubic_cap = cubic.intersect(ray({0.5f, 0.5625f, -1}, {0, 0, 1}));
+    const auto cubic_cap = nearest_hit(cubic, ray({0.5f, 0.5625f, -1}, {0, 0, 1}));
     check(cubic_cap.has_value(), "Cubic cap fill");
 
-    object_t object{.surface = surface_t{h},
+    primitive_t object{.surface = surface_t{h},
         .shader = shader_t{phong_t{
             .ambient = {1, 0, 0}, .diffuse = {0, 0, 0}, .specular = {0, 0, 0}}}};
     object.scale({2, 3, 4}).rotate_y(std::acos(scalar_t{-1}) / 2).translate({2, 0, 0});
     const auto incoming = ray({4, 0.6f, -0.3f}, {-1, 0, 0});
-    const auto transformed = object.intersect(incoming);
+    const auto transformed = nearest_hit(object, incoming);
     check(transformed.has_value() && transformed->object == &object, "Transformed text object");
     close(transformed->distance, 1, "Transformed text distance");
     close(transformed->normal.a[0], 1, "Transformed cap normal");
     auto copy = object;
     copy.translate({0, 2, 0});
-    check(object.intersect(incoming).has_value() && !copy.intersect(incoming),
+    check(nearest_hit(object, incoming).has_value() && !nearest_hit(copy, incoming),
         "Shared text has independent instance transforms");
     const scene_t scene{.objects = {object, copy}};
-    check(scene.occluded(incoming), "Scene and glyph R-trees");
-    close(scene.trace(incoming, 0).a[0], 1, "Text shading");
+    check(occluded(scene, incoming), "Scene and glyph R-trees");
+    close(trace(scene, incoming, 0).a[0], 1, "Text shading");
 
     const auto rejects = [&](std::string_view text, scalar_t depth) {
         try {

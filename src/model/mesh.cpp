@@ -7,6 +7,7 @@ module;
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -212,13 +213,12 @@ bool mesh_t::inside(const vector_t& point) const {
     return parity;
 }
 
-std::optional<hit_t> mesh_t::intersect(const ray_t& ray) const {
+std::size_t mesh_t::intersect(const ray_t& ray, std::span<hit_t> hits) const {
     const auto segment = ray.segment();
     if (ray.min > ray.max) {
-        return std::nullopt;
+        return 0;
     }
-    std::optional<hit_t> nearest;
-    std::size_t nearest_face = data->faces.size();
+    std::size_t count = 0;
     const auto predicate = boost::geometry::index::intersects(segment);
     for (auto it = data->triangles.qbegin(predicate); it != data->triangles.qend(); ++it) {
         const auto index = it->second;
@@ -239,8 +239,7 @@ std::optional<hit_t> mesh_t::intersect(const ray_t& ray) const {
             continue;
         }
         const scalar_t t = boost::qvm::dot(e2, q) / determinant;
-        if (!std::isfinite(t) || !ray[t] || (nearest && (t > nearest->distance
-            || (t == nearest->distance && index >= nearest_face)))) {
+        if (!std::isfinite(t) || !ray[t]) {
             continue;
         }
         const vector_t normal = (1 - u - v) * data->normals[face[0]]
@@ -248,11 +247,10 @@ std::optional<hit_t> mesh_t::intersect(const ray_t& ray) const {
         if (!finite(normal) || boost::qvm::mag_sqr(normal) == 0) {
             throw std::runtime_error("Mesh interpolated normal is invalid; check face winding");
         }
-        nearest = hit_t{.point = ray(t), .normal = boost::qvm::normalized(normal),
-            .distance = t, .object = nullptr};
-        nearest_face = index;
+        append_hit(hits, count, hit_t{.point = ray(t), .normal = boost::qvm::normalized(normal),
+            .distance = t, .object = nullptr, .source_index = index});
     }
-    return nearest;
+    return finish_hits(hits, count);
 }
 
 }

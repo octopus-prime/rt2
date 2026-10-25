@@ -7,14 +7,14 @@ void test_scene_index() {
         return shader_t{phong_t{.ambient = color, .diffuse = {0, 0, 0},
             .specular = {0, 0, 0}, .shininess = 1}};
     };
-    object_t sphere{.surface = surface_t{sphere_t{}}, .shader = material({1, 0, 0})};
-    object_t torus{.surface = surface_t{torus_t{4, scalar_t{0.25f}}},
+    primitive_t sphere{.surface = surface_t{sphere_t{}}, .shader = material({1, 0, 0})};
+    primitive_t torus{.surface = surface_t{torus_t{4, scalar_t{0.25f}}},
         .shader = material({0, 1, 0})};
     torus.translate({4, 0, -2});
-    object_t sor{.surface = surface_t{sor_t{{{0, 1}, {1, 2}, {2, 1}, {3, 1}}}},
+    primitive_t sor{.surface = surface_t{sor_t{{{0, 1}, {1, 2}, {2, 1}, {3, 1}}}},
         .shader = material({0, 0, 1})};
     sor.translate({-4, 0, -2});
-    object_t plane{.surface = surface_t{plane_t{}}, .shader = material({1, 1, 0})};
+    primitive_t plane{.surface = surface_t{plane_t{}}, .shader = material({1, 1, 0})};
     plane.translate({0, 0, -5});
     scene_t scene{.objects = {sphere, torus, sor, plane}};
     check(scene.spatial_index.bounded.size() == 3 && scene.spatial_index.unbounded.size() == 1,
@@ -22,16 +22,17 @@ void test_scene_index() {
     const auto compare = [&](const scene_t& current, const ray_t& incoming) {
         std::optional<hit_t> nearest;
         for (const auto& object : current.objects) {
-            if (const auto hit = object.intersect(incoming)) {
+            if (const auto hit = nearest_hit(object, incoming)) {
                 if (!nearest || hit->distance < nearest->distance) {
                     nearest = hit;
                 }
             }
         }
-        check(current.occluded(incoming) == nearest.has_value(), "Indexed occlusion differs");
-        const auto actual = current.trace(incoming, 0);
+        check(occluded(current, incoming) == nearest.has_value(), "Indexed occlusion differs");
+        const auto actual = trace(current, incoming, 0);
+        hit_buffer_t buffer;
         const vector_t expected = nearest
-            ? nearest->object->eluminate(*nearest, incoming, current, 0) : vector_t{0, 0, 0};
+            ? nearest->object->eluminate(*nearest, incoming, current, 0, buffer) : vector_t{0, 0, 0};
         for (int i = 0; i < 3; ++i) {
             close(actual.a[i], expected.a[i], "Indexed nearest-hit color differs");
         }
@@ -53,7 +54,7 @@ void test_scene_index() {
     compare(planes, ray({500, 500, 4}, {0, 0, -1}));
 
     // Equal-distance hits retain the original object-order preference.
-    object_t coincident_plane{.surface = surface_t{plane_t{}},
+    primitive_t coincident_plane{.surface = surface_t{plane_t{}},
         .shader = material({0, 1, 0})};
     coincident_plane.translate({0, 0, 1});
     const scene_t tied{.objects = {coincident_plane, sphere}};

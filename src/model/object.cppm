@@ -1,44 +1,51 @@
 module;
 
 #include <optional>
+#include <span>
+#include <cstddef>
+#include <variant>
 #include <vector>
-#include <boost/qvm.hpp>
+#include <boost/variant/recursive_wrapper.hpp>
 
 export module model:object;
 
 import :math;
 import :ray;
 import :hit;
-import :surface;
-import :shader;
-import :fwd;
+export import :primitive;
 
 export namespace rt2::model {
 
-struct object_t {
-    surface_t surface;
-    shader_t shader;
-    matrix_t scene_object = boost::qvm::identity_mat<scalar_t, 4>();
-    matrix_t object_scene = boost::qvm::inverse(scene_object);
-    std::optional<box3_t> scene_bounds = transformed_bounds();
+struct intersection_t;
+struct union_t;
+struct difference_t;
 
-    // Call after directly changing surface or scene_object; transform methods do this automatically.
+struct object_t {
+    std::variant<primitive_t, boost::recursive_wrapper<intersection_t>,
+        boost::recursive_wrapper<union_t>, boost::recursive_wrapper<difference_t>> variant;
+
+    object_t(primitive_t primitive);
+    object_t(intersection_t intersection);
+    object_t(union_t united);
+    object_t(difference_t difference);
+    object_t(const object_t&);
+    object_t(object_t&&);
+    object_t& operator=(const object_t&);
+    object_t& operator=(object_t&&);
+    ~object_t();
+    std::optional<box3_t> bounds() const;
     void update_transform();
     object_t& translate(const vector_t& offset);
     object_t& scale(const vector_t& factors);
-    // Angles are in radians; rotations are about scene-space axes through the origin.
-    object_t& rotate_x(const scalar_t angle);
-    object_t& rotate_y(const scalar_t angle);
-    object_t& rotate_z(const scalar_t angle);
-
-    std::optional<hit_t> intersect(const ray_t& ray) const;
+    object_t& rotate_x(scalar_t angle);
+    object_t& rotate_y(scalar_t angle);
+    object_t& rotate_z(scalar_t angle);
+    std::size_t intersect(const ray_t& ray, std::span<hit_t> hits) const;
     bool inside(const vector_t& point) const;
-    vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const;
 
 private:
     friend struct scene_t;
-    std::optional<hit_t> intersect_surface(const ray_t& ray) const;
-    std::optional<box3_t> transformed_bounds() const;
+    std::size_t intersect_surface(const ray_t& ray, std::span<hit_t> hits) const;
 };
 
 using objects_t = std::vector<object_t>;

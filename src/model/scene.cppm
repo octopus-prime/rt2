@@ -1,6 +1,7 @@
 module;
 
 #include <optional>
+#include <span>
 #include <cstddef>
 #include <utility>
 #include <vector>
@@ -41,12 +42,12 @@ struct scene_t {
     // Do not mutate the scene while rendering.
     void rebuild_index();
 
-    bool occluded(const ray_t& ray) const;
-    vector_t trace(const ray_t& ray, unsigned remaining_depth) const;
+    bool occluded(const ray_t& ray, hit_buffer_t& buffer) const;
+    vector_t trace(const ray_t& ray, unsigned remaining_depth, hit_buffer_t& buffer) const;
+    std::size_t intersect(const ray_t& ray, std::span<hit_t> hits) const;
 
 private:
     index_t build_index() const;
-    std::optional<hit_t> intersect(const ray_t& ray) const;
 };
 
 }

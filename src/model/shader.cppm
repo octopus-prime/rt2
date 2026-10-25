@@ -17,7 +17,7 @@ export namespace rt2::model {
 struct shader_t {
     std::variant<phong_t, dielectric_t, metal_t> variant;
 
-    vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const;
+    vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth, hit_buffer_t& buffer) const;
 };
 
 }

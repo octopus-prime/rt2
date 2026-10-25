@@ -1,6 +1,8 @@
 module;
 
 #include <optional>
+#include <span>
+#include <cstddef>
 
 export module model:plane;
 
@@ -16,7 +18,7 @@ struct plane_t {
     // An infinite plane has no finite bounding box.
     std::optional<box3_t> bounds() const;
     // Local XY plane: z = 0, with normal pointing along +Z.
-    std::optional<hit_t> intersect(const ray_t& ray) const;
+    std::size_t intersect(const ray_t& ray, std::span<hit_t> hits) const;
 };
 
 } // namespace rt2::model

@@ -47,7 +47,7 @@ std::string header(std::string_view format) {
 }
 
 void verify(const mesh_t& mesh) {
-    const auto hit = mesh.intersect(ray({0.25f, 0.25f, 2}, {0, 0, -1}));
+    const auto hit = nearest_hit(mesh, ray({0.25f, 0.25f, 2}, {0, 0, -1}));
     check(hit.has_value(), "Loaded PLY triangle intersection");
     close(hit->distance, 2, "PLY distance");
     close(hit->normal.a[2], 1, "PLY winding");

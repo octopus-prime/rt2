@@ -7,6 +7,7 @@ module;
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -133,7 +134,7 @@ std::optional<box3_t> sor_t::bounds() const {
         point3_t{max_radius, max_radius, segments.back().upper}};
 }
 
-std::optional<hit_t> sor_t::intersect(const ray_t& ray) const {
+std::size_t sor_t::intersect(const ray_t& ray, std::span<hit_t> hits) const {
     const auto& origin = ray.origin;
     const auto& direction = ray.direction;
     const scalar_t lower = segments.front().lower;
@@ -146,21 +147,21 @@ std::optional<hit_t> sor_t::intersect(const ray_t& ray) const {
         boost::qvm::mag_sqr(direction), 2 * boost::qvm::dot(relative, direction),
         boost::qvm::mag_sqr(relative) - bound_squared);
     if (!std::isfinite(near) || !std::isfinite(far)) {
-        return std::nullopt;
+        return 0;
     }
     const scalar_t first = std::max(ray.min, near);
     const scalar_t last = std::min(ray.max, far);
     if (first > last) {
-        return std::nullopt;
+        return 0;
     }
-    std::optional<hit_t> nearest;
+    std::size_t count = 0;
     const auto add = [&](scalar_t t, const vector_t& normal) {
-        if (std::isfinite(t) && ray[t] && (!nearest || t < nearest->distance)) {
-            nearest = hit_t{
+        if (std::isfinite(t) && ray[t]) {
+            append_hit(hits, count, hit_t{
                 .point = ray(t),
                 .normal = boost::qvm::normalized(normal),
                 .distance = t
-            };
+            });
         }
     };
     if (direction.a[2] != 0) {
@@ -179,7 +180,7 @@ std::optional<hit_t> sor_t::intersect(const ray_t& ray) const {
     }
     for (const auto& segment : segments) {
         scalar_t begin = first;
-        scalar_t end = nearest ? std::min(last, nearest->distance) : last;
+        scalar_t end = last;
         if (direction.a[2] == 0) {
             if (origin.a[2] < segment.lower || origin.a[2] > segment.upper) {
                 continue;
@@ -232,7 +233,7 @@ std::optional<hit_t> sor_t::intersect(const ray_t& ray) const {
             add(t, {point.a[0], point.a[1], -radius * derivative});
         }
     }
-    return nearest;
+    return finish_hits(hits, count);
 }
 
 } // namespace rt2::model

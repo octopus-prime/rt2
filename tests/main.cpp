@@ -16,6 +16,11 @@ void test_sphere();
 void test_plane();
 void test_surface();
 void test_object();
+void test_primitive();
+void test_difference();
+void test_intersection();
+void test_union();
+void test_hit();
 void test_torus();
 void test_scene_index();
 void test_rotated_grid_aa();
@@ -24,7 +29,7 @@ void test_rotated_grid_aa();
 
 int main(int argc, char** argv) {
     using namespace rt2::tests;
-    const std::array<std::pair<std::string_view, void (*)()>, 11> suites{{
+    const std::array<std::pair<std::string_view, void (*)()>, 16> suites{{
         {"model/sor", test_sor},
         {"model/mesh", test_mesh},
         {"model/ply", test_ply},
@@ -33,6 +38,11 @@ int main(int argc, char** argv) {
         {"model/plane", test_plane},
         {"model/surface", test_surface},
         {"model/object", test_object},
+        {"model/primitive", test_primitive},
+        {"model/difference", test_difference},
+        {"model/intersection", test_intersection},
+        {"model/union", test_union},
+        {"model/hit", test_hit},
         {"model/torus", test_torus},
         {"model/scene", test_scene_index},
         {"renderer/renderer", test_rotated_grid_aa}

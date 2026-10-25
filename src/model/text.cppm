@@ -3,6 +3,8 @@ module;
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <span>
+#include <cstddef>
 #include <string_view>
 
 export module model:text;
@@ -24,7 +26,7 @@ struct text_t {
         scalar_t extrusion = scalar_t{0.2f});
 
     std::optional<box3_t> bounds() const;
-    std::optional<hit_t> intersect(const ray_t& ray) const;
+    std::size_t intersect(const ray_t& ray, std::span<hit_t> hits) const;
     // Strict interior; caps and outline boundaries are excluded.
     bool inside(const vector_t& point) const;
 

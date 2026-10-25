@@ -19,7 +19,7 @@ void test_surface() {
     for (std::size_t i = 0; i < surfaces.size(); ++i) {
         check(surfaces[i].inside(interior[i]), "Variant forwards interior query");
         check(!surfaces[i].inside({10, 10, 10}), "Variant forwards exterior query");
-        check(surfaces[i].intersect(ray(interior[i], {0, 0, 1})).has_value(),
+        check(nearest_hit(surfaces[i], ray(interior[i], {0, 0, 1})).has_value(),
             "Variant forwards intersection");
         check_inside_rejects_nonfinite(surfaces[i]);
     }

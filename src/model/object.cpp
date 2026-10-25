@@ -1,138 +1,92 @@
 module;
 
 #include <optional>
-#include <algorithm>
-#include <cmath>
-#include <limits>
-#include <boost/geometry/algorithms/intersects.hpp>
-#include <boost/geometry/core/access.hpp>
-#include <boost/qvm.hpp>
+#include <span>
+#include <utility>
+#include <variant>
+#include <type_traits>
 
 module model;
 
-import :math;
-import :ray;
-import :hit;
-import :surface;
-import :shader;
-
 namespace rt2::model {
+namespace {
 
-bool object_t::inside(const vector_t& point) const {
-    validate_point(point);
-    return surface.inside(boost::qvm::transform_point(object_scene, point));
+template<class T>
+decltype(auto) node(T& value) {
+    if constexpr (std::is_same_v<std::remove_cv_t<T>, primitive_t>) {
+        return (value);
+    } else {
+        return value.get();
+    }
 }
 
-std::optional<box3_t> object_t::transformed_bounds() const {
-    const auto local = surface.bounds();
-    if (!local) {
-        return std::nullopt;
-    }
-    const vector_t minimum{
-        boost::geometry::get<boost::geometry::min_corner, 0>(*local),
-        boost::geometry::get<boost::geometry::min_corner, 1>(*local),
-        boost::geometry::get<boost::geometry::min_corner, 2>(*local)};
-    const vector_t maximum{
-        boost::geometry::get<boost::geometry::max_corner, 0>(*local),
-        boost::geometry::get<boost::geometry::max_corner, 1>(*local),
-        boost::geometry::get<boost::geometry::max_corner, 2>(*local)};
-    vector_t lower = boost::qvm::transform_point(scene_object, minimum);
-    vector_t upper = lower;
-    vector_t magnitude{0, 0, 0};
-    for (unsigned corner = 0; corner < 8; ++corner) {
-        const vector_t point{
-            corner & 1 ? maximum.a[0] : minimum.a[0],
-            corner & 2 ? maximum.a[1] : minimum.a[1],
-            corner & 4 ? maximum.a[2] : minimum.a[2]};
-        const auto transformed = boost::qvm::transform_point(scene_object, point);
-        for (int axis = 0; axis < 3; ++axis) {
-            lower.a[axis] = std::min(lower.a[axis], transformed.a[axis]);
-            upper.a[axis] = std::max(upper.a[axis], transformed.a[axis]);
-            scalar_t sum = std::abs(scene_object.a[axis][3]);
-            for (int column = 0; column < 3; ++column) {
-                sum += std::abs(scene_object.a[axis][column] * point.a[column]);
-            }
-            magnitude.a[axis] = std::max(magnitude.a[axis], sum);
+}
+
+object_t::object_t(primitive_t primitive) : variant(std::move(primitive)) {}
+object_t::object_t(intersection_t intersection) : variant(std::move(intersection)) {}
+object_t::object_t(union_t united) : variant(std::move(united)) {}
+object_t::object_t(difference_t difference) : variant(std::move(difference)) {}
+object_t::object_t(const object_t&) = default;
+object_t::object_t(object_t&&) = default;
+object_t& object_t::operator=(const object_t&) = default;
+object_t& object_t::operator=(object_t&&) = default;
+object_t::~object_t() = default;
+
+std::optional<box3_t> object_t::bounds() const {
+    return std::visit([](const auto& value) -> std::optional<box3_t> {
+        if constexpr (std::is_same_v<std::remove_cvref_t<decltype(value)>, primitive_t>) {
+            return value.scene_bounds;
+        } else {
+            return value.get().bounds();
         }
-    }
-    // Keep the broad phase conservative in the presence of transform rounding.
-    for (int axis = 0; axis < 3; ++axis) {
-        const scalar_t padding = 16 * std::numeric_limits<scalar_t>::epsilon()
-            * std::max(scalar_t{1}, magnitude.a[axis]);
-        lower.a[axis] -= padding;
-        upper.a[axis] += padding;
-    }
-    return box3_t{point3_t{lower.a[0], lower.a[1], lower.a[2]},
-        point3_t{upper.a[0], upper.a[1], upper.a[2]}};
+    }, variant);
 }
 
 void object_t::update_transform() {
-    object_scene = boost::qvm::inverse(scene_object);
-    scene_bounds = transformed_bounds();
+    std::visit([](auto& value) { node(value).update_transform(); }, variant);
 }
 
 object_t& object_t::translate(const vector_t& offset) {
-    scene_object = boost::qvm::translation_mat(offset) * scene_object;
-    update_transform();
+    std::visit([&](auto& value) { node(value).translate(offset); }, variant);
     return *this;
 }
 
 object_t& object_t::scale(const vector_t& factors) {
-    scene_object = boost::qvm::diag_mat(boost::qvm::XYZ1(factors)) * scene_object;
-    update_transform();
+    std::visit([&](auto& value) { node(value).scale(factors); }, variant);
     return *this;
 }
 
-object_t& object_t::rotate_x(const scalar_t angle) {
-    scene_object = boost::qvm::rotx_mat<4>(angle) * scene_object;
-    update_transform();
+object_t& object_t::rotate_x(scalar_t angle) {
+    std::visit([&](auto& value) { node(value).rotate_x(angle); }, variant);
     return *this;
 }
 
-object_t& object_t::rotate_y(const scalar_t angle) {
-    scene_object = boost::qvm::roty_mat<4>(angle) * scene_object;
-    update_transform();
+object_t& object_t::rotate_y(scalar_t angle) {
+    std::visit([&](auto& value) { node(value).rotate_y(angle); }, variant);
     return *this;
 }
 
-object_t& object_t::rotate_z(const scalar_t angle) {
-    scene_object = boost::qvm::rotz_mat<4>(angle) * scene_object;
-    update_transform();
+object_t& object_t::rotate_z(scalar_t angle) {
+    std::visit([&](auto& value) { node(value).rotate_z(angle); }, variant);
     return *this;
 }
 
-std::optional<hit_t> object_t::intersect(const ray_t& ray) const {
-    const auto segment = ray.segment();
-    if (ray.min > ray.max) {
-        return std::nullopt;
-    }
-    if (scene_bounds) {
-        if (!boost::geometry::intersects(segment, *scene_bounds)) {
-            return std::nullopt;
+std::size_t object_t::intersect(const ray_t& ray, std::span<hit_t> hits) const {
+    return std::visit([&](const auto& value) { return node(value).intersect(ray, hits); }, variant);
+}
+
+std::size_t object_t::intersect_surface(const ray_t& ray, std::span<hit_t> hits) const {
+    return std::visit([&](const auto& value) {
+        if constexpr (std::is_same_v<std::remove_cvref_t<decltype(value)>, primitive_t>) {
+            return value.intersect_surface(ray, hits);
+        } else {
+            return value.get().intersect(ray, hits);
         }
-    }
-    return intersect_surface(ray);
+    }, variant);
 }
 
-std::optional<hit_t> object_t::intersect_surface(const ray_t& ray) const {
-    const ray_t transformed_ray{
-        .origin = boost::qvm::transform_point(object_scene, ray.origin),
-        .direction = boost::qvm::transform_vector(object_scene, ray.direction),
-        .min = ray.min,
-        .max = ray.max
-    };
-    auto nearest = surface.intersect(transformed_ray);
-    if (!nearest) {
-        return std::nullopt;
-    }
-    nearest->point = boost::qvm::transform_point(scene_object, nearest->point);
-    nearest->normal = boost::qvm::normalized(boost::qvm::transform_vector(boost::qvm::transposed(object_scene), nearest->normal));
-    nearest->object = this;
-    return nearest;
-}
-
-vector_t object_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const {
-    return shader.eluminate(hit, incoming, scene, remaining_depth);
+bool object_t::inside(const vector_t& point) const {
+    return std::visit([&](const auto& value) { return node(value).inside(point); }, variant);
 }
 
 }

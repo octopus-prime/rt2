@@ -11,7 +11,7 @@ struct metal_t {
     // Constant RGB reflectance: polished mirror approximation, no transmission.
     vector_t reflectance;
 
-    vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const;
+    vector_t eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth, hit_buffer_t& buffer) const;
 };
 
 }

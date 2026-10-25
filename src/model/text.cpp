@@ -12,6 +12,7 @@ module;
 #include <limits>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -335,14 +336,14 @@ bool text_t::inside(const vector_t& point) const {
     return false;
 }
 
-std::optional<hit_t> text_t::intersect(const ray_t& ray) const {
+std::size_t text_t::intersect(const ray_t& ray, std::span<hit_t> hits) const {
     if (boost::qvm::mag_sqr(ray.direction) == 0) {
-        return std::nullopt;
+        return 0;
     }
-    std::optional<hit_t> nearest;
+    std::size_t count = 0;
     const auto keep = [&](scalar_t distance, const vector_t& normal) {
-        if (ray[distance] && (!nearest || distance < nearest->distance)) {
-            nearest = hit_t{.point = ray(distance), .normal = normal, .distance = distance};
+        if (ray[distance]) {
+            append_hit(hits, count, hit_t{.point = ray(distance), .normal = normal, .distance = distance});
         }
     };
     const auto predicate = boost::geometry::index::intersects(ray.segment());
@@ -396,7 +397,7 @@ std::optional<hit_t> text_t::intersect(const ray_t& ray) const {
             }
         }
     }
-    return nearest;
+    return finish_hits(hits, count);
 }
 
 }

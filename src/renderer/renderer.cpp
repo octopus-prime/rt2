@@ -51,7 +51,7 @@ void render(const model::scene_t& scene, boost::gil::rgb8_view_t pixels, unsigne
         return static_cast<std::uint8_t>(std::lround(encoded * 255));
     };
 
-    const auto render_row = [&](int y) {
+    const auto render_row = [&](int y, model::hit_buffer_t& buffer) {
         constexpr std::array<std::array<scalar_t, 2>, 4> samples{{
             {scalar_t{0.375f}, scalar_t{0.125f}},
             {scalar_t{0.875f}, scalar_t{0.375f}},
@@ -71,7 +71,7 @@ void render(const model::scene_t& scene, boost::gil::rgb8_view_t pixels, unsigne
                     .min = 0,
                     .max = model::ray_max
                 };
-                color += scene.trace(ray, depth);
+                color += scene.trace(ray, depth, buffer);
             }
             color /= static_cast<scalar_t>(samples.size());
             pixels(x, y) = pixel_t(channel(color.a[0]), channel(color.a[1]), channel(color.a[2]));
@@ -89,12 +89,13 @@ void render(const model::scene_t& scene, boost::gil::rgb8_view_t pixels, unsigne
         for (unsigned i = 0; i < thread_count; ++i) {
             workers.emplace_back([&] {
                 try {
+                    model::hit_buffer_t buffer;
                     while (!failed.load(std::memory_order_relaxed)) {
                         const int y = next_row.fetch_add(1, std::memory_order_relaxed);
                         if (y >= height) {
                             break;
                         }
-                        render_row(y);
+                        render_row(y, buffer);
                     }
                 } catch (...) {
                     std::lock_guard lock(error_mutex);

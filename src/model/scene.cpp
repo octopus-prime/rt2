@@ -1,6 +1,7 @@
 module;
 
 #include <optional>
+#include <span>
 #include <algorithm>
 #include <cstddef>
 #include <utility>
@@ -29,8 +30,8 @@ scene_t::index_t scene_t::build_index() const {
     std::vector<std::pair<box3_t, std::size_t>> bounded;
     index_t result;
     for (std::size_t i = 0; i < objects.size(); ++i) {
-        if (objects[i].scene_bounds) {
-            bounded.emplace_back(*objects[i].scene_bounds, i);
+        if (const auto bounds = objects[i].bounds()) {
+            bounded.emplace_back(*bounds, i);
         } else {
             result.unbounded.push_back(i);
         }
@@ -46,7 +47,7 @@ void scene_t::rebuild_index() {
     spatial_index = build_index();
 }
 
-bool scene_t::occluded(const ray_t& ray) const {
+bool scene_t::occluded(const ray_t& ray, hit_buffer_t& buffer) const {
     const auto segment = ray.segment();
     if (ray.min > ray.max) {
         return false;
@@ -54,38 +55,37 @@ bool scene_t::occluded(const ray_t& ray) const {
     const auto predicate = boost::geometry::index::intersects(segment);
     for (auto it = spatial_index.bounded.qbegin(predicate);
          it != spatial_index.bounded.qend(); ++it) {
-        if (objects[it->second].intersect_surface(ray)) {
+        if (!buffer.intersect(objects[it->second], ray).empty()) {
             return true;
         }
     }
     return std::ranges::any_of(spatial_index.unbounded, [&](std::size_t i) {
-        return objects[i].intersect_surface(ray).has_value();
+        return !buffer.intersect(objects[i], ray).empty();
     });
 }
 
-vector_t scene_t::trace(const ray_t& ray, unsigned remaining_depth) const {
-    return intersect(ray).transform([&](const auto& hit) {
-        return hit.object->eluminate(hit, ray, *this, remaining_depth);
-    }).value_or(vector_t{0, 0, 0});
+vector_t scene_t::trace(const ray_t& ray, unsigned remaining_depth, hit_buffer_t& buffer) const {
+    const auto hits = buffer.intersect(*this, ray);
+    if (hits.empty()) {
+        return {0, 0, 0};
+    }
+    const hit_t nearest = hits.front();
+    return nearest.object->eluminate(nearest, ray, *this, remaining_depth, buffer);
 }
 
-std::optional<hit_t> scene_t::intersect(const ray_t& ray) const {
+std::size_t scene_t::intersect(const ray_t& ray, std::span<hit_t> hits) const {
     const auto segment = ray.segment();
     if (ray.min > ray.max) {
-        return std::nullopt;
+        return 0;
     }
-    std::optional<hit_t> nearest_hit;
-    std::size_t nearest_index = objects.size();
+    std::size_t count = 0;
     const auto test = [&](std::size_t i) {
         // Keep numerical surface solving independent of candidate traversal order.
-        if (const auto hit = objects[i].intersect_surface(ray)) {
-            // Preserve linear traversal's object-order tie breaking.
-            if (!nearest_hit || hit->distance < nearest_hit->distance
-                || (hit->distance == nearest_hit->distance && i < nearest_index)) {
-                nearest_hit = hit;
-                nearest_index = i;
-            }
+        const auto added = objects[i].intersect_surface(ray, hits.subspan(count));
+        for (auto& hit : hits.subspan(count, added)) {
+            hit.source_index = i;
         }
+        count += added;
     };
     const auto predicate = boost::geometry::index::intersects(segment);
     for (auto it = spatial_index.bounded.qbegin(predicate);
@@ -95,7 +95,12 @@ std::optional<hit_t> scene_t::intersect(const ray_t& ray) const {
     for (const auto i : spatial_index.unbounded) {
         test(i);
     }
-    return nearest_hit;
+    // Preserve scene object order for exact-distance ties, independent of R-tree order.
+    std::sort(hits.begin(), hits.begin() + count, [](const auto& a, const auto& b) {
+        return a.distance < b.distance || (a.distance == b.distance
+            && a.source_index < b.source_index);
+    });
+    return count;
 }
 
 }

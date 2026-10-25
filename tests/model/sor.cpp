@@ -8,7 +8,7 @@
 namespace rt2::tests {
 
 void check_hit(const sor_t& surface, const ray_t& incoming, scalar_t distance, vector_t normal) {
-    const auto hit = surface.intersect(incoming);
+    const auto hit = nearest_hit(surface, incoming);
     check(hit.has_value(), "Expected a surface hit");
     close(hit->distance, distance, "Hit distance");
     const auto point = incoming(distance);
@@ -21,6 +21,8 @@ void check_hit(const sor_t& surface, const ray_t& incoming, scalar_t distance, v
 
 void test_cylinder() {
     const sor_t cylinder{{{0, 1}, {1, 1}, {2, 1}, {3, 1}}};
+    check_hit_distances(cylinder, ray({0, 0, -1}, {0, 0, 1}), {1, 4});
+    check_hit_distances(cylinder, ray({-2, 0, 1.5f}, {1, 0, 0}), {1, 3});
     check_hit(cylinder, ray({2, 0, scalar_t{1.5f}}, {-1, 0, 0}), 1, {1, 0, 0});
     check_hit(cylinder, ray({0, 0, scalar_t{1.5f}}, {1, 0, 0}), 1, {1, 0, 0});
     check_hit(cylinder, ray({2, 0, 1}, {-2, 0, 0}), scalar_t{0.5f}, {1, 0, 0});
@@ -30,12 +32,12 @@ void test_cylinder() {
     check_hit(cylinder, ray({0, 0, 1}, {0, 0, 1}), 2, {0, 0, 1});
     check_hit(cylinder, ray({-2, 1, scalar_t{1.5f}}, {1, 0, 0}), 2, {0, 1, 0});
     check_hit(cylinder, ray({2, 0, 1}, {-1, 0, 0}, 1, 1), 1, {1, 0, 0});
-    check(!cylinder.intersect(ray({2, 0, 1}, {-1, 0, 0}, 0, scalar_t{0.9f})),
+    check(!nearest_hit(cylinder, ray({2, 0, 1}, {-1, 0, 0}, 0, scalar_t{0.9f})),
         "Ray maximum must exclude a farther hit");
-    check(!cylinder.intersect(ray({2, 0, 1}, {1, 0, 0})), "Ray points away");
-    check(!cylinder.intersect(ray({-2, scalar_t{1.01f}, 1}, {1, 0, 0})),
+    check(!nearest_hit(cylinder, ray({2, 0, 1}, {1, 0, 0})), "Ray points away");
+    check(!nearest_hit(cylinder, ray({-2, scalar_t{1.01f}, 1}, {1, 0, 0})),
         "Near-tangent miss");
-    check(!cylinder.intersect(ray({2, 0, 4}, {-1, 0, 0})), "Outside height range");
+    check(!nearest_hit(cylinder, ray({2, 0, 4}, {-1, 0, 0})), "Outside height range");
 
     const sor_t cone{{{0, 1}, {1, 2}, {2, 3}, {3, 4}}};
     const scalar_t inv_sqrt_two = 1 / std::sqrt(scalar_t{2});
@@ -69,12 +71,12 @@ void test_curved_profile() {
         check_hit(surface, ray(origin, direction, scalar_t{1.9f}, scalar_t{2.1f}), 2,
             {1 / length, 0, -slope / length});
     }
-    object_t object{
+    primitive_t object{
         .surface = surface_t{surface},
         .shader = shader_t{phong_t{}}
     };
     object.scale({2, 1, 1}).translate({3, 0, 0});
-    const auto hit = object.intersect(ray({7, 0, 1}, {-1, 0, 0}));
+    const auto hit = nearest_hit(object, ray({7, 0, 1}, {-1, 0, 0}));
     check(hit.has_value() && hit->object == &object, "Transformed SOR integration");
     close(hit->distance, 4 - 2 * spline(1), "Transformed SOR distance");
 }

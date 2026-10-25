@@ -42,6 +42,7 @@ mesh_t cube(bool reverse = false, bool open = false, bool cavity = false) {
 
 void test_mesh_inside() {
     const auto mesh = cube();
+    check_hit_distances(mesh, ray({0, 0, -3}, {0, 0, 1}), {2, 4});
     const auto reversed = cube(true);
     for (const auto& point : std::array<vector_t, 4>{
             vector_t{0, 0, 0}, {0.2f, 0.3f, 0.4f}, {-0.9f, 0.5f, 0.5f}, {0, -0.5f, 0.5f}}) {
@@ -62,7 +63,7 @@ void test_mesh_inside() {
         }
         check(threw, "Open mesh reports unsupported inside, including cached validation");
     }
-    check(open.intersect(ray({0, 0, -3}, {0, 0, 1})).has_value(),
+    check(nearest_hit(open, ray({0, 0, -3}, {0, 0, 1})).has_value(),
         "Open mesh still renders");
     const auto hollow = cube(false, false, true);
     check(!hollow.inside({0, 0, 0}) && hollow.inside({0.75f, 0, 0})
@@ -101,26 +102,26 @@ void test_mesh() {
         ray({0.25f, 0.25f, -2}, {0, 0, 1}),
         ray({0, 0, 2}, {0, 0, -1}),
         ray({0.5f, 0.5f, 2}, {0, 0, -1})}) {
-        const auto hit = triangle.intersect(incoming);
+        const auto hit = nearest_hit(triangle, incoming);
         check(hit.has_value(), "Two-sided triangle, edge and vertex hits");
         close(hit->distance, 2, "Triangle distance");
         close(hit->normal.a[2], 1, "Winding normal");
         check(hit->object == nullptr, "Local mesh hit object");
     }
-    check(!triangle.intersect(ray({1, 1, 2}, {0, 0, -1})), "Outside triangle");
-    check(!triangle.intersect(ray({0.25f, 0.25f, 2}, {1, 0, 0})), "Parallel ray");
-    check(!triangle.intersect(ray({0.25f, 0.25f, 0}, {1, 0, 0})), "Coplanar ray");
-    check(!triangle.intersect(ray({0.25f, 0.25f, 2}, {0, 0, 0})), "Zero direction");
-    check(!triangle.intersect(ray({0.25f, 0.25f, 2}, {0, 0, -1}, 0, 1)), "Finite max");
-    check(triangle.intersect(ray({0.25f, 0.25f, 2}, {0, 0, -1}, 2, 2)).has_value(),
+    check(!nearest_hit(triangle, ray({1, 1, 2}, {0, 0, -1})), "Outside triangle");
+    check(!nearest_hit(triangle, ray({0.25f, 0.25f, 2}, {1, 0, 0})), "Parallel ray");
+    check(!nearest_hit(triangle, ray({0.25f, 0.25f, 0}, {1, 0, 0})), "Coplanar ray");
+    check(!nearest_hit(triangle, ray({0.25f, 0.25f, 2}, {0, 0, 0})), "Zero direction");
+    check(!nearest_hit(triangle, ray({0.25f, 0.25f, 2}, {0, 0, -1}, 0, 1)), "Finite max");
+    check(nearest_hit(triangle, ray({0.25f, 0.25f, 2}, {0, 0, -1}, 2, 2)).has_value(),
         "Inclusive degenerate ray interval");
-    const auto scaled_ray_hit = triangle.intersect(ray({0.25f, 0.25f, 2}, {0, 0, -2}));
+    const auto scaled_ray_hit = nearest_hit(triangle, ray({0.25f, 0.25f, 2}, {0, 0, -2}));
     check(scaled_ray_hit.has_value(), "Non-normalized direction");
     close(scaled_ray_hit->distance, 1, "Non-normalized ray parameter");
 
     const mesh_t smooth{{{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 2}},
         {{0, 1, 2}, {0, 3, 1}}};
-    const auto hit = smooth.intersect(ray({0.25f, 0.25f, 2}, {0, 0, -1}));
+    const auto hit = nearest_hit(smooth, ray({0.25f, 0.25f, 2}, {0, 0, -1}));
     check(hit.has_value(), "Smooth triangle hit");
     const vector_t shared = boost::qvm::normalized(vector_t{0, 2, 1});
     const vector_t expected = boost::qvm::normalized(
@@ -138,34 +139,34 @@ void test_mesh() {
         faces.push_back({start, start + 1, start + 2});
     }
     const mesh_t layered{std::move(vertices), std::move(faces)};
-    close(layered.intersect(ray({0.25f, 0.25f, 50}, {0, 0, -1}))->distance, 11,
+    close(nearest_hit(layered, ray({0.25f, 0.25f, 50}, {0, 0, -1}))->distance, 11,
         "Multi-node triangle R-tree nearest hit");
     const auto copy = layered;
-    close(copy.intersect(ray({0.25f, 0.25f, 50}, {0, 0, -1}, 12))->distance, 12,
+    close(nearest_hit(copy, ray({0.25f, 0.25f, 50}, {0, 0, -1}, 12))->distance, 12,
         "Copied mesh and ray minimum");
 
-    object_t object{.surface = surface_t{triangle},
+    primitive_t object{.surface = surface_t{triangle},
         .shader = shader_t{phong_t{
             .ambient = {1, 0, 0}, .diffuse = {0, 0, 0}, .specular = {0, 0, 0}}}};
     object.scale({2, 3, 1}).rotate_x(std::acos(scalar_t{-1}) / 2).translate({0, 2, 0});
     const auto incoming = ray({0.5f, 4, 0.75f}, {0, -1, 0});
-    const auto transformed = object.intersect(incoming);
+    const auto transformed = nearest_hit(object, incoming);
     check(transformed.has_value() && transformed->object == &object, "Mesh object integration");
     close(transformed->distance, 2, "Transformed mesh distance");
     close(transformed->normal.a[1], -1, "Transformed mesh normal");
     const scene_t scene{.objects = {object}};
-    check(scene.occluded(incoming), "Scene to mesh nested R-tree query");
-    close(scene.trace(incoming, 0).a[0], 1, "Mesh shading through scene");
+    check(occluded(scene, incoming), "Scene to mesh nested R-tree query");
+    close(trace(scene, incoming, 0).a[0], 1, "Mesh shading through scene");
     auto rotated_copy = object;
     rotated_copy.rotate_y(std::acos(scalar_t{-1}) / 2).translate({4, 0, 0});
     const auto copy_ray = ray({scalar_t{4.75f}, 4, scalar_t{-0.5f}}, {0, -1, 0});
-    const auto copy_hit = rotated_copy.intersect(copy_ray);
+    const auto copy_hit = nearest_hit(rotated_copy, copy_ray);
     check(copy_hit.has_value() && copy_hit->object == &rotated_copy,
         "Shared mesh instance has independent transform");
     close(copy_hit->distance, 2, "Rotated shared mesh distance");
-    check(object.intersect(incoming).has_value(), "Original mesh instance is unchanged");
+    check(nearest_hit(object, incoming).has_value(), "Original mesh instance is unchanged");
     const scene_t instances{.objects = {object, rotated_copy}};
-    check(instances.occluded(incoming) && instances.occluded(copy_ray),
+    check(occluded(instances, incoming) && occluded(instances, copy_ray),
         "Scene indexes both shared mesh instances");
 
     const auto rejects = [](std::vector<vector_t> points, std::vector<mesh_t::face_t> triangles) {

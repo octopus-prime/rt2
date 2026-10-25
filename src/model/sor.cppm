@@ -2,6 +2,8 @@ module;
 
 #include <array>
 #include <optional>
+#include <span>
+#include <cstddef>
 #include <vector>
 
 export module model:sor;
@@ -20,7 +22,7 @@ public:
 
     bool inside(const vector_t& point) const;
     std::optional<box3_t> bounds() const;
-    std::optional<hit_t> intersect(const ray_t& ray) const;
+    std::size_t intersect(const ray_t& ray, std::span<hit_t> hits) const;
 
 private:
     struct segment_t {

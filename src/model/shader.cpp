@@ -14,9 +14,9 @@ import :metal;
 
 namespace rt2::model {
 
-vector_t shader_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const {
+vector_t shader_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth, hit_buffer_t& buffer) const {
     return std::visit([&](const auto& shader) {
-        return shader.eluminate(hit, incoming, scene, remaining_depth);
+        return shader.eluminate(hit, incoming, scene, remaining_depth, buffer);
     }, variant);
 }
 

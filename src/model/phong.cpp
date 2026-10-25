@@ -11,7 +11,7 @@ import :scene;
 
 namespace rt2::model {
 
-vector_t phong_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const {
+vector_t phong_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth, hit_buffer_t& buffer) const {
     vector_t color = ambient;
     const vector_t view_dir = boost::qvm::normalized(-incoming.direction);
     for (const auto& light : scene.lights) {
@@ -30,7 +30,7 @@ vector_t phong_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene
             .min = ray_epsilon,
             .max = std::min(ray_max, boost::qvm::mag(to_light) - ray_epsilon)
         };
-        if (scene.occluded(shadow_ray)) {
+        if (scene.occluded(shadow_ray, buffer)) {
             continue;
         }
         const vector_t diffuse_ = diff * diffuse * light.intensity;

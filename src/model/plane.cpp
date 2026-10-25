@@ -16,20 +16,22 @@ std::optional<box3_t> plane_t::bounds() const {
     return std::nullopt;
 }
 
-std::optional<hit_t> plane_t::intersect(const ray_t& ray) const {
+std::size_t plane_t::intersect(const ray_t& ray, std::span<hit_t> hits) const {
     auto denom = ray.direction.a[2];
     if (std::abs(denom) < 1e-6f) {
-        return std::nullopt;
+        return 0;
     }
     auto t = -ray.origin.a[2] / denom;
     if (!ray[t]) {
-        return std::nullopt;
+        return 0;
     }
-    return hit_t{
+    std::size_t count = 0;
+    append_hit(hits, count, hit_t{
         .point = ray(t),
         .normal = {0, 0, 1},
         .distance = t
-    };
+    });
+    return count;
 }
 
 } // namespace rt2::model

@@ -11,7 +11,7 @@ import :scene;
 
 namespace rt2::model {
 
-vector_t dielectric_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth) const {
+vector_t dielectric_t::eluminate(const hit_t& hit, const ray_t& incoming, const scene_t& scene, unsigned remaining_depth, hit_buffer_t& buffer) const {
     // if (!std::isfinite(refractive_index) || refractive_index <= 0) {
     //     throw std::invalid_argument("Dielectric refractive index must be finite and positive");
     // }
@@ -32,7 +32,7 @@ vector_t dielectric_t::eluminate(const hit_t& hit, const ray_t& incoming, const 
             .direction = boost::qvm::normalized(direction),
             .min = ray_epsilon,
             .max = ray_max
-        }, remaining_depth - 1);
+        }, remaining_depth - 1, buffer);
     };
     if (refractive_index == 1) {
         return trace_direction(incident);
