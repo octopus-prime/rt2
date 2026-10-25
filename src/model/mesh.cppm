@@ -17,6 +17,7 @@ export namespace rt2::model {
 struct mesh_t {
     using face_t = std::array<std::size_t, 3>;
 
+    // Copies share immutable vertices, normals and the triangle index.
     // Counterclockwise winding defines outward normals. Shared vertices are
     // smoothed with area-weighted normals; duplicate vertices for sharp edges.
     // Empty, non-finite, degenerate or inconsistently cancelling geometry is rejected.

@@ -76,6 +76,17 @@ void test_mesh() {
     const scene_t scene{.objects = {object}};
     check(scene.occluded(incoming), "Scene to mesh nested R-tree query");
     close(scene.trace(incoming, 0).a[0], 1, "Mesh shading through scene");
+    auto rotated_copy = object;
+    rotated_copy.rotate_y(std::acos(scalar_t{-1}) / 2).translate({4, 0, 0});
+    const auto copy_ray = ray({scalar_t{4.75f}, 4, scalar_t{-0.5f}}, {0, -1, 0});
+    const auto copy_hit = rotated_copy.intersect(copy_ray);
+    check(copy_hit.has_value() && copy_hit->object == &rotated_copy,
+        "Shared mesh instance has independent transform");
+    close(copy_hit->distance, 2, "Rotated shared mesh distance");
+    check(object.intersect(incoming).has_value(), "Original mesh instance is unchanged");
+    const scene_t instances{.objects = {object, rotated_copy}};
+    check(instances.occluded(incoming) && instances.occluded(copy_ray),
+        "Scene indexes both shared mesh instances");
 
     const auto rejects = [](std::vector<vector_t> points, std::vector<mesh_t::face_t> triangles) {
         try {

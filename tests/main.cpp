@@ -10,6 +10,7 @@ namespace rt2::tests {
 
 void test_sor();
 void test_mesh();
+void test_ply();
 void test_object();
 void test_torus_precision();
 void test_scene_index();
@@ -19,9 +20,10 @@ void test_rotated_grid_aa();
 
 int main(int argc, char** argv) {
     using namespace rt2::tests;
-    const std::array<std::pair<std::string_view, void (*)()>, 6> suites{{
+    const std::array<std::pair<std::string_view, void (*)()>, 7> suites{{
         {"model/sor", test_sor},
         {"model/mesh", test_mesh},
+        {"model/ply", test_ply},
         {"model/object", test_object},
         {"model/torus", test_torus_precision},
         {"model/scene", test_scene_index},

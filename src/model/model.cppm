@@ -9,6 +9,7 @@ export import :sphere;
 export import :torus;
 export import :sor;
 export import :mesh;
+export import :ply;
 export import :surface;
 export import :phong;
 export import :dielectric;

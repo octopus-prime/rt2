@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <filesystem>
 #include <numbers>
 #include <print>
 #include <stdexcept>
@@ -10,6 +11,7 @@
 #include <utility>
 #include <vector>
 #include <boost/qvm.hpp>
+#include <boost/geometry/core/access.hpp>
 #include <boost/gil.hpp>
 #include <boost/gil/extension/io/png.hpp>
 
@@ -186,6 +188,44 @@ int main(int argc, char** argv) try {
         }
     };
 
+    const auto dragon_template = [&] {
+        // https://www.artec3d.com/3d-models/fantasy-dragon
+        const auto file = std::filesystem::path{RT2_MESH_DIRECTORY}
+            / "fantasy-dragon-ply" / "Fantasy Dragon.ply";
+        std::println("Loading dragon: {}", file.string());
+        const auto start = std::chrono::steady_clock::now();
+        const auto mesh = read_ply(file);
+        const auto bounds = *mesh.bounds();
+        const scalar_t min_x = boost::geometry::get<boost::geometry::min_corner, 0>(bounds);
+        const scalar_t min_y = boost::geometry::get<boost::geometry::min_corner, 1>(bounds);
+        const scalar_t min_z = boost::geometry::get<boost::geometry::min_corner, 2>(bounds);
+        const scalar_t max_x = boost::geometry::get<boost::geometry::max_corner, 0>(bounds);
+        const scalar_t max_y = boost::geometry::get<boost::geometry::max_corner, 1>(bounds);
+        const scalar_t max_z = boost::geometry::get<boost::geometry::max_corner, 2>(bounds);
+        const scalar_t scale = scalar_t{3.2f} / (max_y - min_y);
+        auto dragon = object_t{
+            .surface = surface_t{mesh},
+            .shader = shader_t{phong_t{
+                .ambient = {0.025f, 0.018f, 0.006f},
+                .diffuse = {0.65f, 0.38f, 0.08f},
+                .specular = {0.7f, 0.6f, 0.4f},
+                .shininess = 64}}
+        };
+        dragon.translate({-(min_x + max_x) / 2, -min_y, -(min_z + max_z) / 2})
+            .scale({scale, scale, scale});
+        std::println("Dragon loaded and indexed in {} ms",
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - start).count());
+        return dragon;
+    }();
+
+    if (!many_objects) {
+        auto dragon = dragon_template;
+        dragon.rotate_y(-quarter_turn / 3).translate({4.7f, -2, 2.5f});
+        scene.objects.push_back(std::move(dragon));
+        scene.rebuild_index();
+    }
+
     if (many_objects) {
         objects_t objects;
         objects.reserve(401);
@@ -213,6 +253,12 @@ int main(int argc, char** argv) try {
                         .rotate_z(quarter_turn * static_cast<scalar_t>(row % 4) / 4)
                         .translate(origin + vector_t{0, 1, 0});
                     objects.push_back(object);
+                } else if (kind == 2) {
+                    auto dragon = dragon_template;
+                    dragon.scale({0.55f, 0.55f, 0.55f})
+                        .rotate_y(quarter_turn * static_cast<scalar_t>(row % 8) / 2)
+                        .translate(origin);
+                    objects.push_back(std::move(dragon));
                 } else {
                     const auto& shader = kind % 3 == 0 ? copper.shader
                         : kind % 3 == 1 ? blue.shader : coral.shader;
